@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
+import { useToast } from '@/hooks/use-toast';
 import { 
   BarChart3, 
   TrendingUp,
@@ -14,10 +15,56 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Activity
+  Activity,
+  Filter
 } from 'lucide-react';
 
 const GovtDashboard: React.FC = () => {
+  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const { toast } = useToast();
+
+  const handleFilterChange = (period: string) => {
+    setSelectedPeriod(period);
+    toast({
+      title: "Filter Applied",
+      description: `Showing data for: ${period}`,
+    });
+  };
+
+  const handleExport = () => {
+    toast({
+      title: "Export Started",
+      description: "Generating comprehensive healthcare report...",
+    });
+  };
+
+  const handleVillageDetails = (villageName: string) => {
+    toast({
+      title: "Village Details",
+      description: `Opening detailed view for ${villageName}`,
+    });
+  };
+
+  const handleQuickAction = (action: string) => {
+    const actions = {
+      'generate-report': 'Generating monthly healthcare report',
+      'analytics': 'Opening advanced analytics dashboard',
+      'doctor-registry': 'Opening doctor registration system',
+      'pharmacy-network': 'Opening pharmacy network management'
+    };
+    
+    toast({
+      title: "Government Action",
+      description: actions[action] || 'Action performed',
+    });
+  };
+
+  const handleViewAllAlerts = () => {
+    toast({
+      title: "System Alerts",
+      description: "Opening comprehensive alert management",
+    });
+  };
   const overviewStats = [
     { 
       label: 'Total Consultations', 
@@ -168,11 +215,11 @@ const GovtDashboard: React.FC = () => {
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleFilterChange('month')}>
                       <Calendar className="h-4 w-4 mr-2" />
                       This Month
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleExport}>
                       <Download className="h-4 w-4 mr-2" />
                       Export
                     </Button>
@@ -203,7 +250,7 @@ const GovtDashboard: React.FC = () => {
                         <span className={`px-3 py-1 text-xs rounded-full ${getStatusColor(village.status)}`}>
                           {village.status.replace('-', ' ')}
                         </span>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleVillageDetails(village.name)}>
                           View Details
                         </Button>
                       </div>
@@ -245,19 +292,35 @@ const GovtDashboard: React.FC = () => {
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="medical" className="w-full justify-start">
+                <Button 
+                  variant="medical" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('generate-report')}
+                >
                   <FileText className="h-4 w-4 mr-2" />
                   Generate Report
                 </Button>
-                <Button variant="secondary" className="w-full justify-start">
+                <Button 
+                  variant="secondary" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('analytics')}
+                >
                   <TrendingUp className="h-4 w-4 mr-2" />
                   View Analytics
                 </Button>
-                <Button variant="secondary" className="w-full justify-start">
+                <Button 
+                  variant="secondary" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('doctor-registry')}
+                >
                   <Users className="h-4 w-4 mr-2" />
                   Doctor Registry
                 </Button>
-                <Button variant="secondary" className="w-full justify-start">
+                <Button 
+                  variant="secondary" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('pharmacy-network')}
+                >
                   <Building className="h-4 w-4 mr-2" />
                   Pharmacy Network
                 </Button>
@@ -289,7 +352,7 @@ const GovtDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <Button variant="ghost" size="sm" className="w-full mt-3">
+                <Button variant="ghost" size="sm" className="w-full mt-3" onClick={handleViewAllAlerts}>
                   View All Alerts
                 </Button>
               </CardContent>

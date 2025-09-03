@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Header } from '@/components/layout/Header';
+import { AddMedicineModal } from '@/components/modals/AddMedicineModal';
+import { usePharmacy } from '@/hooks/usePharmacy';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Package, 
   Search,
@@ -13,10 +16,74 @@ import {
   Clock,
   Truck,
   Plus,
-  Upload
+  Upload,
+  Edit,
+  FileText
 } from 'lucide-react';
 
 const PharmacyDashboard: React.FC = () => {
+  const { medicines, inventory, fetchInventory, updateInventory } = usePharmacy();
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [addMedicineModal, setAddMedicineModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    // Filter inventory in real-time
+  };
+
+  const handleImportCSV = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        toast({
+          title: "CSV Import Started",
+          description: `Importing inventory from ${file.name}`,
+        });
+        // In real app, process the CSV file
+      }
+    };
+    input.click();
+  };
+
+  const handleEditItem = (itemId: string) => {
+    setEditingItem(itemId);
+    toast({
+      title: "Edit Item",
+      description: "Opening inventory item editor",
+    });
+  };
+
+  const handleOrderAction = (orderId: string, action: 'delivered' | 'prepare') => {
+    const actionText = action === 'delivered' ? 'marked as delivered' : 'being prepared';
+    toast({
+      title: "Order Updated",
+      description: `Order ${orderId} has been ${actionText}`,
+    });
+  };
+
+  const handleQuickAction = (action: string) => {
+    const actions = {
+      'add-medicine': () => setAddMedicineModal(true),
+      'bulk-update': () => toast({ title: "Bulk Update", description: "Opening bulk inventory update" }),
+      'low-stock': () => toast({ title: "Low Stock", description: "Showing low stock items" }),
+      'sales-report': () => toast({ title: "Sales Report", description: "Generating sales report" }),
+      'reorder': () => toast({ title: "Reorder Stock", description: "Initiating stock reorder process" })
+    };
+    
+    actions[action]?.();
+  };
+
+  const handleViewAllOrders = () => {
+    toast({
+      title: "All Orders",
+      description: "Opening comprehensive order management",
+    });
+  };
   const inventoryItems = [
     {
       id: 1,
@@ -155,11 +222,11 @@ const PharmacyDashboard: React.FC = () => {
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleImportCSV}>
                       <Upload className="h-4 w-4 mr-2" />
                       Import CSV
                     </Button>
-                    <Button variant="medical" size="sm">
+                    <Button variant="medical" size="sm" onClick={() => setAddMedicineModal(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Medicine
                     </Button>
@@ -172,6 +239,8 @@ const PharmacyDashboard: React.FC = () => {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     placeholder="Search medicines..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
                     className="pl-10"
                   />
                 </div>
@@ -208,7 +277,8 @@ const PharmacyDashboard: React.FC = () => {
                               <StatusIcon className="h-3 w-3" />
                               {item.status.replace('-', ' ')}
                             </span>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleEditItem(item.id.toString())}>
+                              <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </Button>
                           </div>
@@ -260,14 +330,19 @@ const PharmacyDashboard: React.FC = () => {
                         }`}>
                           {order.status}
                         </span>
-                        <Button variant="medical" size="sm">
+                        <Button 
+                          variant="medical" 
+                          size="sm"
+                          onClick={() => handleOrderAction(order.id, order.status === 'ready' ? 'delivered' : 'prepare')}
+                        >
                           {order.status === 'ready' ? 'Mark Delivered' : 'Prepare Order'}
                         </Button>
                       </div>
                     </div>
                   ))}
                 </div>
-                <Button variant="outline" className="w-full mt-4">
+                <Button variant="outline" className="w-full mt-4" onClick={handleViewAllOrders}>
+                  <FileText className="h-4 w-4 mr-2" />
                   View All Orders
                 </Button>
               </CardContent>
@@ -282,19 +357,35 @@ const PharmacyDashboard: React.FC = () => {
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="medical" className="w-full justify-start">
+                <Button 
+                  variant="medical" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('add-medicine')}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add New Medicine
                 </Button>
-                <Button variant="secondary" className="w-full justify-start">
+                <Button 
+                  variant="secondary" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('bulk-update')}
+                >
                   <Upload className="h-4 w-4 mr-2" />
                   Bulk Update Stock
                 </Button>
-                <Button variant="secondary" className="w-full justify-start">
+                <Button 
+                  variant="secondary" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('low-stock')}
+                >
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   View Low Stock
                 </Button>
-                <Button variant="secondary" className="w-full justify-start">
+                <Button 
+                  variant="secondary" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('sales-report')}
+                >
                   <TrendingUp className="h-4 w-4 mr-2" />
                   Sales Report
                 </Button>
@@ -315,7 +406,8 @@ const PharmacyDashboard: React.FC = () => {
                     <p className="font-medium">8 medicines below threshold</p>
                     <p className="text-muted-foreground">Including Amoxicillin, Metformin</p>
                   </div>
-                  <Button variant="warning" size="sm" className="w-full">
+                  <Button variant="warning" size="sm" className="w-full" onClick={() => handleQuickAction('reorder')}>
+                    <Package className="h-4 w-4 mr-2" />
                     Reorder Stock
                   </Button>
                 </div>
@@ -349,6 +441,11 @@ const PharmacyDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <AddMedicineModal
+        isOpen={addMedicineModal}
+        onClose={() => setAddMedicineModal(false)}
+      />
     </div>
   );
 };

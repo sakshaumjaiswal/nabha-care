@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
+import { BookingModal } from '@/components/modals/BookingModal';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Video, 
   Clock, 
@@ -22,6 +25,21 @@ const Consult: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [bookingModal, setBookingModal] = useState<{
+    isOpen: boolean;
+    doctorId: string;
+    doctorName: string;
+    isImmediate: boolean;
+  }>({
+    isOpen: false,
+    doctorId: '',
+    doctorName: '',
+    isImmediate: false
+  });
+  
+  const { toast } = useToast();
 
   const specialties = [
     'General Medicine',
@@ -75,12 +93,66 @@ const Consult: React.FC = () => {
     '2:30 PM', '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM'
   ];
 
-  const filteredDoctors = mockDoctors.filter(doctor => {
+  const fetchDoctors = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('doctors')
+        .select('*')
+        .eq('is_online', true);
+
+      if (error) throw error;
+      
+      // Use fetched doctors if available, otherwise fall back to mock data
+      const doctorsWithProfiles = (data || []).map(doctor => ({
+        id: doctor.id,
+        name: `Doctor ${doctor.id.substring(0, 8)}`, // Temporary name since we can't join profiles
+        specialty: doctor.specialties?.[0] || 'General Medicine',
+        rating: doctor.rating || 4.5,
+        village: 'Available',
+        availability: 'Available Now',
+        consultationFee: `₹${doctor.consultation_fee || 200}`,
+        experience: '10+ years',
+        nextSlot: '2:30 PM',
+        isOnline: doctor.is_online
+      }));
+
+      setDoctors(doctorsWithProfiles.length > 0 ? doctorsWithProfiles : mockDoctors);
+    } catch (error: any) {
+      console.error('Error fetching doctors:', error);
+      // Use mock data as fallback
+      setDoctors(mockDoctors);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBooking = (doctorId: string, doctorName: string, isImmediate: boolean = false) => {
+    setBookingModal({
+      isOpen: true,
+      doctorId,
+      doctorName,
+      isImmediate
+    });
+  };
+
+  const handleTimeSlotClick = (slot: string) => {
+    toast({
+      title: "Time Slot Selected",
+      description: `Selected ${slot} - Please select a doctor to book this slot`,
+    });
+  };
+
+  const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSpecialty = !selectedSpecialty || doctor.specialty === selectedSpecialty;
     return matchesSearch && matchesSpecialty;
   });
+
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -186,12 +258,22 @@ const Consult: React.FC = () => {
                         </p>
                         <div className="space-y-2">
                           {doctor.isOnline ? (
-                            <Button variant="medical" size="sm" className="w-full">
+                            <Button 
+                              variant="medical" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => handleBooking(doctor.id, doctor.name, true)}
+                            >
                               <Video className="h-4 w-4 mr-2" />
                               Start Now
                             </Button>
                           ) : (
-                            <Button variant="outline" size="sm" className="w-full">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => handleBooking(doctor.id, doctor.name, false)}
+                            >
                               <CalendarIcon className="h-4 w-4 mr-2" />
                               Schedule
                             </Button>
@@ -247,6 +329,7 @@ const Consult: React.FC = () => {
                       variant="outline"
                       size="sm"
                       className="justify-center"
+                      onClick={() => handleTimeSlotClick(slot)}
                     >
                       {slot}
                     </Button>
@@ -272,6 +355,14 @@ const Consult: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <BookingModal
+        isOpen={bookingModal.isOpen}
+        onClose={() => setBookingModal(prev => ({ ...prev, isOpen: false }))}
+        doctorId={bookingModal.doctorId}
+        doctorName={bookingModal.doctorName}
+        isImmediate={bookingModal.isImmediate}
+      />
     </div>
   );
 };

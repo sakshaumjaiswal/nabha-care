@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { usePharmacy } from '@/hooks/usePharmacy';
+import { useToast } from '@/hooks/use-toast';
 import { 
   MapPin, 
   Search, 
@@ -22,6 +24,50 @@ const Pharmacy: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [searchType, setSearchType] = useState<'medicine' | 'pharmacy'>('medicine');
+  const [locationEnabled, setLocationEnabled] = useState(false);
+  
+  const { pharmacies, checkMedicineAvailability } = usePharmacy();
+  const { toast } = useToast();
+
+  const handleLocationUse = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocationEnabled(true);
+          toast({
+            title: "Location Access Granted",
+            description: "Showing pharmacies near your location",
+          });
+        },
+        (error) => {
+          toast({
+            title: "Location Access Denied",
+            description: "Please enable location access or search manually",
+            variant: "destructive",
+          });
+        }
+      );
+    } else {
+      toast({
+        title: "Location Not Supported",
+        description: "Your browser doesn't support location services",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRequestDelivery = (pharmacyName: string) => {
+    toast({
+      title: "Delivery Requested",
+      description: `Your delivery request has been sent to ${pharmacyName}. They will contact you shortly.`,
+    });
+  };
+
+  const handleDirections = (address: string) => {
+    // Open Google Maps with directions
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    window.open(mapsUrl, '_blank');
+  };
 
   const mockPharmacies = [
     {
@@ -150,9 +196,14 @@ const Pharmacy: React.FC = () => {
                 />
               </div>
 
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleLocationUse}
+                disabled={locationEnabled}
+              >
                 <Navigation className="h-4 w-4 mr-2" />
-                Use Location
+                {locationEnabled ? 'Location Enabled' : 'Use Location'}
               </Button>
             </div>
 
@@ -228,7 +279,7 @@ const Pharmacy: React.FC = () => {
                             Call
                           </a>
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleDirections(pharmacy.address)}>
                           <MapPin className="h-4 w-4 mr-2" />
                           Directions
                         </Button>
@@ -270,6 +321,7 @@ const Pharmacy: React.FC = () => {
                         variant="medical" 
                         size="sm"
                         disabled={!pharmacy.isOpen}
+                        onClick={() => handleRequestDelivery(pharmacy.name)}
                       >
                         Request Delivery
                       </Button>

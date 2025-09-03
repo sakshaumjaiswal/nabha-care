@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RecordActionsModal } from '@/components/modals/RecordActionsModal';
+import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, 
   Download, 
@@ -26,6 +28,16 @@ import {
 const Records: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedTab, setSelectedTab] = useState<string>('all');
+  const [actionModal, setActionModal] = useState<{
+    isOpen: boolean;
+    action: 'export' | 'share' | 'qr' | 'upload' | 'photo' | 'backup';
+    recordTitle?: string;
+  }>({
+    isOpen: false,
+    action: 'export'
+  });
+  
+  const { toast } = useToast();
   
   const mockRecords = [
     {
@@ -113,6 +125,10 @@ const Records: React.FC = () => {
     }
   };
 
+  const handleAction = (action: typeof actionModal.action, recordTitle?: string) => {
+    setActionModal({ isOpen: true, action, recordTitle });
+  };
+
   const filteredRecords = mockRecords.filter(record => {
     const matchesSearch = record.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          record.doctor.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -148,11 +164,11 @@ const Records: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => handleAction('export')}>
                   <Download className="h-4 w-4 mr-2" />
                   Export All
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => handleAction('qr')}>
                   <QrCode className="h-4 w-4 mr-2" />
                   Share QR
                 </Button>
@@ -248,11 +264,11 @@ const Records: React.FC = () => {
                           
                           {/* Actions */}
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" onClick={() => handleAction('export', record.title)}>
                               <Download className="h-4 w-4 mr-2" />
                               Download
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleAction('share', record.title)}>
                               <Share className="h-4 w-4 mr-2" />
                               Share
                             </Button>
@@ -289,11 +305,11 @@ const Records: React.FC = () => {
                 <CardTitle className="text-base">Add New Record</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={() => handleAction('upload')}>
                   <Upload className="h-4 w-4 mr-2" />
                   Upload File
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={() => handleAction('photo')}>
                   <Camera className="h-4 w-4 mr-2" />
                   Take Photo
                 </Button>
@@ -346,7 +362,7 @@ const Records: React.FC = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Create an encrypted offline backup of your records
                 </p>
-                <Button variant="outline" size="sm" className="w-full">
+                <Button variant="outline" size="sm" className="w-full" onClick={() => handleAction('backup')}>
                   <Download className="h-4 w-4 mr-2" />
                   Create Backup
                 </Button>
@@ -362,7 +378,7 @@ const Records: React.FC = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Generate QR code for emergency medical access
                 </p>
-                <Button variant="destructive" size="sm" className="w-full">
+                <Button variant="destructive" size="sm" className="w-full" onClick={() => handleAction('qr')}>
                   <QrCode className="h-4 w-4 mr-2" />
                   Generate QR
                 </Button>
@@ -371,6 +387,13 @@ const Records: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <RecordActionsModal
+        isOpen={actionModal.isOpen}
+        onClose={() => setActionModal(prev => ({ ...prev, isOpen: false }))}
+        action={actionModal.action}
+        recordTitle={actionModal.recordTitle}
+      />
     </div>
   );
 };

@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
+import { VideoCallModal } from '@/components/modals/VideoCallModal';
+import { useConsultations } from '@/hooks/useConsultations';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Video, 
   Calendar, 
@@ -11,10 +14,81 @@ import {
   QrCode,
   Users,
   TrendingUp,
-  Phone
+  Phone,
+  Bell,
+  RefreshCw
 } from 'lucide-react';
 
 const DoctorDashboard: React.FC = () => {
+  const { consultations, loading, fetchConsultations, updateConsultationStatus, startVideoCall } = useConsultations();
+  const { toast } = useToast();
+  const [videoCallModal, setVideoCallModal] = useState<{
+    isOpen: boolean;
+    patientName: string;
+    roomId?: string;
+  }>({
+    isOpen: false,
+    patientName: ''
+  });
+
+  const handleJoinCall = async (consultationId: string, patientName: string) => {
+    try {
+      const roomId = await startVideoCall(consultationId);
+      setVideoCallModal({ 
+        isOpen: true, 
+        patientName,
+        roomId 
+      });
+    } catch (error) {
+      // Error handled in hook
+    }
+  };
+
+  const handleCallPhone = (patientName: string, phone: string = '+91 98765 43210') => {
+    toast({
+      title: "Calling Patient",
+      description: `Initiating call to ${patientName}`,
+    });
+    // In a real app, this would initiate a phone call
+    window.location.href = `tel:${phone}`;
+  };
+
+  const handleViewCalendar = () => {
+    toast({
+      title: "Calendar View",
+      description: "Opening detailed calendar view",
+    });
+    // Navigate to calendar view
+  };
+
+  const handleRefreshQueue = () => {
+    fetchConsultations();
+    toast({
+      title: "Queue Refreshed",
+      description: "Patient queue has been updated",
+    });
+  };
+
+  const handleQuickAction = (action: string) => {
+    const actions = {
+      'prescription': 'Prescription pad opened',
+      'qr': 'QR scanner activated',
+      'search': 'Patient search opened',
+      'analytics': 'Analytics dashboard opened'
+    };
+    
+    toast({
+      title: "Quick Action",
+      description: actions[action] || 'Action performed',
+    });
+  };
+
+  const handleViewAllNotifications = () => {
+    toast({
+      title: "Notifications",
+      description: "Showing all notifications",
+    });
+  };
   const upcomingConsultations = [
     {
       id: 1,
@@ -101,7 +175,7 @@ const DoctorDashboard: React.FC = () => {
                       {upcomingConsultations.length} appointments scheduled
                     </CardDescription>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleViewCalendar}>
                     <Calendar className="h-4 w-4 mr-2" />
                     View Calendar
                   </Button>
@@ -143,7 +217,14 @@ const DoctorDashboard: React.FC = () => {
                       }`}>
                         {consultation.status}
                       </span>
-                      <Button variant="medical" size="sm">
+                      <Button 
+                        variant="medical" 
+                        size="sm"
+                        onClick={() => consultation.type === 'Video Call' 
+                          ? handleJoinCall(consultation.id.toString(), consultation.patient)
+                          : handleCallPhone(consultation.patient)
+                        }
+                      >
                         {consultation.type === 'Video Call' ? 'Join Call' : 'Call Patient'}
                       </Button>
                     </div>
@@ -166,7 +247,8 @@ const DoctorDashboard: React.FC = () => {
                   <p className="text-muted-foreground mb-4">
                     No patients currently in queue
                   </p>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={handleRefreshQueue}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh Queue
                   </Button>
                 </div>
@@ -182,19 +264,35 @@ const DoctorDashboard: React.FC = () => {
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="medical" className="w-full justify-start">
+                <Button 
+                  variant="medical" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('prescription')}
+                >
                   <FileText className="h-4 w-4 mr-2" />
                   Create Prescription
                 </Button>
-                <Button variant="secondary" className="w-full justify-start">
+                <Button 
+                  variant="secondary" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('qr')}
+                >
                   <QrCode className="h-4 w-4 mr-2" />
                   Scan Patient QR
                 </Button>
-                <Button variant="secondary" className="w-full justify-start">
+                <Button 
+                  variant="secondary" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('search')}
+                >
                   <User className="h-4 w-4 mr-2" />
                   Search Patient
                 </Button>
-                <Button variant="secondary" className="w-full justify-start">
+                <Button 
+                  variant="secondary" 
+                  className="w-full justify-start"
+                  onClick={() => handleQuickAction('analytics')}
+                >
                   <TrendingUp className="h-4 w-4 mr-2" />
                   View Analytics
                 </Button>
@@ -242,7 +340,8 @@ const DoctorDashboard: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" className="w-full mt-3">
+                <Button variant="ghost" size="sm" className="w-full mt-3" onClick={handleViewAllNotifications}>
+                  <Bell className="h-4 w-4 mr-2" />
                   View All Notifications
                 </Button>
               </CardContent>
@@ -250,6 +349,13 @@ const DoctorDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <VideoCallModal
+        isOpen={videoCallModal.isOpen}
+        onClose={() => setVideoCallModal(prev => ({ ...prev, isOpen: false }))}
+        patientName={videoCallModal.patientName}
+        roomId={videoCallModal.roomId}
+      />
     </div>
   );
 };
