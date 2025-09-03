@@ -97,7 +97,7 @@ const PatientDashboard: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={() => console.log('Export offline records')}>
                 <Download className="h-4 w-4 mr-2" />
                 Export Offline
               </Button>
@@ -165,7 +165,7 @@ const PatientDashboard: React.FC = () => {
                           <span className="px-2 py-1 text-xs bg-medical-success/10 text-medical-success rounded-full">
                             Completed
                           </span>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => console.log('View details for consultation:', consultation.id)}>
                             View Details
                           </Button>
                         </div>
@@ -174,9 +174,9 @@ const PatientDashboard: React.FC = () => {
                   </Card>
                 ))}
               </div>
-              <Button variant="outline" className="w-full mt-4">
-                View All Consultations
-              </Button>
+                <Button variant="outline" className="w-full mt-4" onClick={() => console.log('View all consultations')}>
+                  View All Consultations
+                </Button>
             </div>
           </div>
 
@@ -200,7 +200,7 @@ const PatientDashboard: React.FC = () => {
                   <span className="text-sm text-muted-foreground">Last Checkup</span>
                   <span className="text-sm font-medium">Jan 15, 2024</span>
                 </div>
-                <Button variant="outline" size="sm" className="w-full mt-4">
+                <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => console.log('Update health data')}>
                   Update Health Data
                 </Button>
               </CardContent>
@@ -235,8 +235,8 @@ const PatientDashboard: React.FC = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   For medical emergencies, call immediately:
                 </p>
-                <Button variant="destructive" className="w-full">
-                  Call 102 (Ambulance)
+                <Button variant="destructive" className="w-full" asChild>
+                  <a href="tel:102">Call 102 (Ambulance)</a>
                 </Button>
               </CardContent>
             </Card>

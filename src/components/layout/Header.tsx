@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, Menu } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { MobileMenu } from './MobileMenu';
 
 interface HeaderProps {
   currentUser?: any;
@@ -70,9 +71,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout }) => {
           )}
 
           {/* Mobile Menu */}
-          <Button variant="ghost" size="icon" className="md:hidden">
-            <Menu className="h-5 w-5" />
-          </Button>
+          <MobileMenu currentUser={currentUser} onLogout={onLogout} />
         </div>
       </div>
     </header>
