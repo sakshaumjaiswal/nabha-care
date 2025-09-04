@@ -97,7 +97,7 @@ const Consult: React.FC = () => {
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSpecialty = !selectedSpecialty || doctor.specialty === selectedSpecialty;
+    const matchesSpecialty = !selectedSpecialty || selectedSpecialty === 'all' || doctor.specialty === selectedSpecialty;
     return matchesSearch && matchesSpecialty;
   });
 
@@ -130,10 +130,10 @@ const Consult: React.FC = () => {
               </div>
               <Select value={selectedSpecialty} onValueChange={setSelectedSpecialty}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Specialties" />
+                  <SelectValue placeholder="Filter by specialty..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Specialties</SelectItem>
+                  <SelectItem value="all">All Specialties</SelectItem>
                   {specialties.map((specialty) => (
                     <SelectItem key={specialty} value={specialty}>
                       {specialty}
