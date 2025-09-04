@@ -1,0 +1,29 @@
+{
+  "header": {
+    "bookConsultation": "Book Consultation",
+    "symptomChecker": "Symptom Checker",
+    "findPharmacy": "Find Pharmacy",
+    "signIn": "Sign In",
+    "getStarted": "Get Started"
+  },
+  "landing": {
+    "heroTitle": "Healthcare for <1>Rural Punjab</1>",
+    "heroSubtitle": "Connecting villages to quality healthcare through telemedicine. Consult doctors, check symptoms, and access your medical records - all from your mobile.",
+    "startPatient": "Start as Patient",
+    "joinDoctor": "Join as Doctor",
+    "featuresTitle": "Complete Healthcare Platform",
+    "featuresSubtitle": "From symptom checking to prescription delivery, we've built everything you need for comprehensive rural healthcare access.",
+    "feature1Title": "Video Consultations",
+    "feature1Desc": "Connect with certified doctors through secure video calls from anywhere in rural Punjab.",
+    "feature2Title": "AI Symptom Checker",
+    "feature2Desc": "Get preliminary health assessments and recommendations using our intelligent symptom analysis.",
+    "feature3Title": "Digital Health Records",
+    "feature3Desc": "Store and access your medical history offline. Share with doctors instantly via QR codes.",
+    "feature4Title": "Local Pharmacy Network",
+    "feature4Desc": "Find nearby pharmacies, check medicine availability, and get delivery updates in real-time.",
+    "ctaTitle": "Ready to Transform Rural Healthcare?",
+    "ctaSubtitle": "Join thousands of patients and doctors already using Nabha Care to deliver quality healthcare across Punjab's villages.",
+    "getStarted": "Get Started Today",
+    "watchDemo": "Watch Demo"
+  }
+}

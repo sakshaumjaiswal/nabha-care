@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { MobileMenu } from './MobileMenu';
+import { useTranslation } from 'react-i18next';
 
 interface HeaderProps {
   currentUser?: any;
@@ -11,6 +12,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout }) => {
+  const { t } = useTranslation();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-6">
@@ -30,19 +33,19 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout }) => {
             to="/consult" 
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            Book Consultation
+            {t('header.bookConsultation')}
           </Link>
           <Link 
             to="/symptom-checker" 
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            Symptom Checker
+            {t('header.symptomChecker')}
           </Link>
           <Link 
             to="/pharmacy" 
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            Find Pharmacy
+            {t('header.findPharmacy')}
           </Link>
         </nav>
 
@@ -62,10 +65,10 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout }) => {
           ) : (
             <div className="flex items-center space-x-2">
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/auth/login">Sign In</Link>
+                <Link to="/auth/login">{t('header.signIn')}</Link>
               </Button>
               <Button variant="medical" size="sm" asChild>
-                <Link to="/auth/signup">Get Started</Link>
+                <Link to="/auth/signup">{t('header.getStarted')}</Link>
               </Button>
             </div>
           )}

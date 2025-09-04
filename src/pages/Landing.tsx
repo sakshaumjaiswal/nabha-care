@@ -9,35 +9,37 @@ import {
   FileText, 
   MapPin, 
   Shield, 
-  Clock,
   Users,
   Star,
   ChevronRight,
   Heart
 } from 'lucide-react';
 import heroImage from '@/assets/hero-telemedicine.jpg';
+import { useTranslation, Trans } from 'react-i18next';
 
 const Landing: React.FC = () => {
+  const { t } = useTranslation();
+
   const features = [
     {
       icon: Video,
-      title: 'Video Consultations',
-      description: 'Connect with certified doctors through secure video calls from anywhere in rural Punjab.'
+      title: t('landing.feature1Title'),
+      description: t('landing.feature1Desc')
     },
     {
       icon: Stethoscope,
-      title: 'AI Symptom Checker',
-      description: 'Get preliminary health assessments and recommendations using our intelligent symptom analysis.'
+      title: t('landing.feature2Title'),
+      description: t('landing.feature2Desc')
     },
     {
       icon: FileText,
-      title: 'Digital Health Records',
-      description: 'Store and access your medical history offline. Share with doctors instantly via QR codes.'
+      title: t('landing.feature3Title'),
+      description: t('landing.feature3Desc')
     },
     {
       icon: MapPin,
-      title: 'Local Pharmacy Network',
-      description: 'Find nearby pharmacies, check medicine availability, and get delivery updates in real-time.'
+      title: t('landing.feature4Title'),
+      description: t('landing.feature4Desc')
     }
   ];
 
@@ -59,27 +61,25 @@ const Landing: React.FC = () => {
             <div className="space-y-8">
               <div className="space-y-4">
                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                  Healthcare for{' '}
-                  <span className="bg-gradient-hero bg-clip-text text-transparent">
-                    Rural Punjab
-                  </span>
+                  <Trans i18nKey="landing.heroTitle">
+                    Healthcare for <span className="bg-gradient-hero bg-clip-text text-transparent">Rural Punjab</span>
+                  </Trans>
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-md">
-                  Connecting villages to quality healthcare through telemedicine. 
-                  Consult doctors, check symptoms, and access your medical records - all from your mobile.
+                  {t('landing.heroSubtitle')}
                 </p>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button variant="medical" size="lg" className="text-lg px-8 py-3" asChild>
                   <Link to="/auth/signup?role=patient">
-                    Start as Patient
+                    {t('landing.startPatient')}
                     <ChevronRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
                 <Button variant="outline" size="lg" className="text-lg px-8 py-3" asChild>
                   <Link to="/auth/signup?role=doctor">
-                    Join as Doctor
+                    {t('landing.joinDoctor')}
                   </Link>
                 </Button>
               </div>
@@ -143,11 +143,10 @@ const Landing: React.FC = () => {
         <div className="container px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-              Complete Healthcare Platform
+              {t('landing.featuresTitle')}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              From symptom checking to prescription delivery, we've built everything 
-              you need for comprehensive rural healthcare access.
+              {t('landing.featuresSubtitle')}
             </p>
           </div>
           
@@ -172,18 +171,17 @@ const Landing: React.FC = () => {
         <div className="container px-6 text-center">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-              Ready to Transform Rural Healthcare?
+              {t('landing.ctaTitle')}
             </h2>
             <p className="text-lg text-white/90 mb-8">
-              Join thousands of patients and doctors already using Nabha Care 
-              to deliver quality healthcare across Punjab's villages.
+              {t('landing.ctaSubtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button variant="secondary" size="lg" className="text-lg px-8 py-3" asChild>
-                <Link to="/auth/signup">Get Started Today</Link>
+                <Link to="/auth/signup">{t('landing.getStarted')}</Link>
               </Button>
               <Button variant="outline" size="lg" className="text-lg px-8 py-3 border-white text-white hover:bg-white hover:text-primary" asChild>
-                <Link to="/demo">Watch Demo</Link>
+                <Link to="/demo">{t('landing.watchDemo')}</Link>
               </Button>
             </div>
           </div>

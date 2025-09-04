@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Globe, ChevronDown } from 'lucide-react';
 import {
@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useTranslation } from 'react-i18next';
 
 interface Language {
   code: string;
@@ -20,24 +21,13 @@ const languages: Language[] = [
   { code: 'pa', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ' },
 ];
 
-interface LanguageSwitcherProps {
-  currentLang?: string;
-  onChange?: (lang: string) => void;
-}
+export const LanguageSwitcher: React.FC = () => {
+  const { i18n } = useTranslation();
 
-export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ 
-  currentLang = 'en', 
-  onChange 
-}) => {
-  const [selectedLang, setSelectedLang] = useState(currentLang);
-  
-  const currentLanguage = languages.find(lang => lang.code === selectedLang) || languages[0];
+  const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
 
   const handleLanguageChange = (langCode: string) => {
-    setSelectedLang(langCode);
-    onChange?.(langCode);
-    // Persist to localStorage
-    localStorage.setItem('nabha-care-language', langCode);
+    i18n.changeLanguage(langCode);
   };
 
   return (
@@ -54,7 +44,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
           <DropdownMenuItem
             key={language.code}
             onClick={() => handleLanguageChange(language.code)}
-            className={selectedLang === language.code ? 'bg-surface-elevated' : ''}
+            className={i18n.language === language.code ? 'bg-surface-elevated' : ''}
           >
             <div className="flex flex-col">
               <span className="font-medium">{language.nativeName}</span>
