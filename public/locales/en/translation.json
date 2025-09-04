@@ -7,7 +7,8 @@
     "getStarted": "Get Started"
   },
   "landing": {
-    "heroTitle": "Healthcare for <1>Rural Punjab</1>",
+    "heroTitle": "Healthcare for",
+    "heroTitleHighlight": "Rural Punjab",
     "heroSubtitle": "Connecting villages to quality healthcare through telemedicine. Consult doctors, check symptoms, and access your medical records - all from your mobile.",
     "startPatient": "Start as Patient",
     "joinDoctor": "Join as Doctor",

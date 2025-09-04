@@ -15,7 +15,7 @@ import {
   Heart
 } from 'lucide-react';
 import heroImage from '@/assets/hero-telemedicine.jpg';
-import { useTranslation, Trans } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 
 const Landing: React.FC = () => {
   const { t } = useTranslation();
@@ -61,9 +61,10 @@ const Landing: React.FC = () => {
             <div className="space-y-8">
               <div className="space-y-4">
                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                  <Trans i18nKey="landing.heroTitle">
-                    Healthcare for <span className="bg-gradient-hero bg-clip-text text-transparent">Rural Punjab</span>
-                  </Trans>
+                  {t('landing.heroTitle')}{' '}
+                  <span className="bg-gradient-hero bg-clip-text text-transparent">
+                    {t('landing.heroTitleHighlight')}
+                  </span>
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-md">
                   {t('landing.heroSubtitle')}
@@ -110,8 +111,8 @@ const Landing: React.FC = () => {
                     <Users className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">Dr. Amar Singh</p>
-                    <p className="text-xs text-muted-foreground">Online - Nabha PHC</p>
+                    <p className="font-semibold text-sm">Online Consultation</p>
+                    <p className="text-xs text-muted-foreground">Available Now</p>
                   </div>
                 </div>
               </div>
@@ -176,12 +177,9 @@ const Landing: React.FC = () => {
             <p className="text-lg text-white/90 mb-8">
               {t('landing.ctaSubtitle')}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex justify-center">
               <Button variant="secondary" size="lg" className="text-lg px-8 py-3" asChild>
                 <Link to="/auth/signup">{t('landing.getStarted')}</Link>
-              </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3 border-white text-white hover:bg-white hover:text-primary" asChild>
-                <Link to="/demo">{t('landing.watchDemo')}</Link>
               </Button>
             </div>
           </div>
@@ -197,7 +195,7 @@ const Landing: React.FC = () => {
               <span className="text-lg font-bold">Nabha Care</span>
             </div>
             <div className="text-sm text-muted-foreground">
-              © 2024 Nabha Care. Improving rural healthcare access across Punjab.
+              © 2025 Nabha Care. Improving rural healthcare access across Punjab.
             </div>
           </div>
         </div>

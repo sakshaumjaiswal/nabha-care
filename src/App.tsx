@@ -13,7 +13,6 @@ import Consult from "./pages/Consult";
 import SymptomChecker from "./pages/SymptomChecker";
 import Pharmacy from "./pages/Pharmacy";
 import Records from "./pages/Records";
-import Demo from "./pages/Demo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,7 +35,6 @@ const App = () => (
           <Route path="/symptom-checker" element={<SymptomChecker />} />
           <Route path="/pharmacy" element={<Pharmacy />} />
           <Route path="/records" element={<Records />} />
-          <Route path="/demo" element={<Demo />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
