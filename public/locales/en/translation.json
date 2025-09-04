@@ -9,7 +9,7 @@
   "landing": {
     "heroTitle": "Healthcare for",
     "heroTitleHighlight": "Rural Punjab",
-    "heroSubtitle": "Connecting villages to quality healthcare through telemedicine. Consult doctors, check symptoms, and access your medical records - all from your mobile.",
+    "heroSubtitle": "Connecting villages to quality healthcare through telemedicine. Consult doctors, check symptoms, and access your medical records - all from this site.",
     "startPatient": "Start as Patient",
     "joinDoctor": "Join as Doctor",
     "featuresTitle": "Complete Healthcare Platform",
@@ -24,7 +24,6 @@
     "feature4Desc": "Find nearby pharmacies, check medicine availability, and get delivery updates in real-time.",
     "ctaTitle": "Ready to Transform Rural Healthcare?",
     "ctaSubtitle": "Join thousands of patients and doctors already using Nabha Care to deliver quality healthcare across Punjab's villages.",
-    "getStarted": "Get Started Today",
-    "watchDemo": "Watch Demo"
+    "getStarted": "Get Started Today"
   }
 }

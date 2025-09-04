@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarIcon, Clock, Video, Phone, MessageSquare, CreditCard, CheckCircle } from 'lucide-react';
+import { Video, Phone, MessageSquare, CreditCard, CheckCircle } from 'lucide-react';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -181,7 +181,7 @@ export function BookingModal({ isOpen, onClose, doctorName }: BookingModalProps)
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={resetAndClose}>
       <DialogContent className="sm:max-w-md">
         {renderStepContent()}
       </DialogContent>

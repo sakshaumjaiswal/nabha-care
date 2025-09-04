@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { BookingModal } from '@/components/modals/BookingModal';
-import { useToast } from '@/hooks/use-toast';
-import { Video, Star, MapPin, Search, Filter, User, MessageSquare, Phone } from 'lucide-react';
+import { Star, Search, Filter } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Consult: React.FC = () => {
@@ -20,8 +18,6 @@ const Consult: React.FC = () => {
     isOpen: false,
     doctorName: ''
   });
-  
-  const { toast } = useToast();
 
   const specialties = [
     'General Physician', 'Dermatology', 'Psychiatry', 'Pediatrics',
