@@ -1,18 +1,24 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { MobileMenu } from './MobileMenu';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/hooks/useAuth';
 
-interface HeaderProps {
-  currentUser?: any;
-  onLogout?: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout }) => {
+export const Header: React.FC = () => {
   const { t } = useTranslation();
+  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleBookConsultation = () => {
+    if (profile) {
+      navigate('/consult');
+    } else {
+      navigate('/auth');
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -29,12 +35,12 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout }) => {
 
         {/* Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
-          <Link 
-            to="/consult" 
+          <button
+            onClick={handleBookConsultation}
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             {t('header.bookConsultation')}
-          </Link>
+          </button>
           <Link 
             to="/symptom-checker" 
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -53,28 +59,28 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout }) => {
         <div className="flex items-center space-x-4">
           <LanguageSwitcher />
           
-          {currentUser ? (
+          {profile ? (
             <div className="flex items-center space-x-2">
               <span className="text-sm text-muted-foreground hidden md:inline">
-                Welcome, {currentUser.name}
+                Welcome, {profile.name}
               </span>
-              <Button variant="ghost" size="sm" onClick={onLogout}>
+              <Button variant="ghost" size="sm" onClick={signOut}>
                 Sign Out
               </Button>
             </div>
           ) : (
             <div className="flex items-center space-x-2">
               <Button variant="ghost" size="sm" asChild>
-                <Link to="/auth/login">{t('header.signIn')}</Link>
+                <Link to="/auth">{t('header.signIn')}</Link>
               </Button>
               <Button variant="medical" size="sm" asChild>
-                <Link to="/auth/signup">{t('header.getStarted')}</Link>
+                <Link to="/auth">{t('header.getStarted')}</Link>
               </Button>
             </div>
           )}
 
           {/* Mobile Menu */}
-          <MobileMenu currentUser={currentUser} onLogout={onLogout} />
+          <MobileMenu />
         </div>
       </div>
     </header>

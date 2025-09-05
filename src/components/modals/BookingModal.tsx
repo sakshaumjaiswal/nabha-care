@@ -5,21 +5,26 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Video, Phone, MessageSquare, CreditCard, CheckCircle } from 'lucide-react';
+import { useConsultations } from '@/hooks/useConsultations';
 
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  doctorName: string;
+  doctor: {
+    id: string;
+    name: string;
+  };
 }
 
 type ConsultationType = 'chat' | 'voice' | 'video';
 
-export function BookingModal({ isOpen, onClose, doctorName }: BookingModalProps) {
-  const [step, setStep] = useState(1); // 1: Type, 2: Details, 3: Payment, 4: Confirmation
+export function BookingModal({ isOpen, onClose, doctor }: BookingModalProps) {
+  const [step, setStep] = useState(1);
   const [consultationType, setConsultationType] = useState<ConsultationType | null>(null);
   const [symptoms, setSymptoms] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { bookConsultation } = useConsultations();
 
   const prices = {
     chat: 50,
@@ -45,10 +50,19 @@ export function BookingModal({ isOpen, onClose, doctorName }: BookingModalProps)
 
   const handlePayment = async () => {
     setLoading(true);
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setLoading(false);
-    setStep(4);
+    try {
+        // Simulate payment processing
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Book consultation via hook
+        await bookConsultation(doctor.id, doctor.name, symptoms, consultationType!);
+
+        setLoading(false);
+        setStep(4);
+    } catch (error) {
+        setLoading(false);
+        // Error is handled in the hook
+    }
   };
   
   const resetAndClose = () => {
@@ -65,7 +79,7 @@ export function BookingModal({ isOpen, onClose, doctorName }: BookingModalProps)
           <>
             <DialogHeader>
               <DialogTitle>Choose Consultation Type</DialogTitle>
-              <DialogDescription>Select how you'd like to connect with {doctorName}.</DialogDescription>
+              <DialogDescription>Select how you'd like to connect with {doctor.name}.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
               <CardButton
@@ -98,7 +112,7 @@ export function BookingModal({ isOpen, onClose, doctorName }: BookingModalProps)
             <DialogHeader>
               <DialogTitle>Describe Your Symptoms</DialogTitle>
               <DialogDescription>
-                Provide some details for {doctorName} before your {consultationType} consultation.
+                Provide some details for {doctor.name} before your {consultationType} consultation.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
@@ -122,7 +136,7 @@ export function BookingModal({ isOpen, onClose, doctorName }: BookingModalProps)
             <>
                 <DialogHeader>
                     <DialogTitle>Complete Your Payment</DialogTitle>
-                    <DialogDescription>Securely pay for your consultation with {doctorName}.</DialogDescription>
+                    <DialogDescription>Securely pay for your consultation with {doctor.name}.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                     <div className="p-4 border rounded-lg bg-surface-muted">
@@ -132,7 +146,7 @@ export function BookingModal({ isOpen, onClose, doctorName }: BookingModalProps)
                         </div>
                         <div className="flex justify-between items-center mt-2">
                             <span className="text-muted-foreground">Doctor</span>
-                            <span className="font-semibold">{doctorName}</span>
+                            <span className="font-semibold">{doctor.name}</span>
                         </div>
                         <div className="flex justify-between items-center mt-4 pt-4 border-t">
                             <span className="text-lg font-bold">Total Amount</span>
@@ -167,7 +181,7 @@ export function BookingModal({ isOpen, onClose, doctorName }: BookingModalProps)
                     </div>
                     <DialogTitle>Booking Confirmed!</DialogTitle>
                     <DialogDescription>
-                        Your {consultationType} consultation with {doctorName} is confirmed. You will be notified when the doctor is ready.
+                        Your {consultationType} consultation with {doctor.name} is confirmed. You can check the details in your dashboard.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="pt-4">
@@ -181,7 +195,7 @@ export function BookingModal({ isOpen, onClose, doctorName }: BookingModalProps)
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={resetAndClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         {renderStepContent()}
       </DialogContent>

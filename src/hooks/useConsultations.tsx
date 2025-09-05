@@ -1,63 +1,101 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from './useAuth';
 
 export interface Consultation {
   id: string;
   patient_id: string;
   doctor_id: string;
   scheduled_at: string;
-  status: string;
+  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
   symptoms?: string;
   notes?: string;
   prescription?: any;
   room_id?: string;
+  doctors: {
+    profiles: {
+      name: string
+    }
+  }
 }
 
 export function useConsultations() {
+  const { user, profile } = useAuth();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const fetchConsultations = async () => {
+  const fetchConsultations = useCallback(async () => {
+    if (!user || !profile) return;
+
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('consultations')
-        .select('*')
-        .order('scheduled_at', { ascending: true });
+        .select(`
+          *,
+          doctors (
+            profiles (
+              name
+            )
+          )
+        `)
+        .order('scheduled_at', { ascending: false });
+      
+      if (profile.role === 'patient') {
+        query = query.eq('patient_id', user.id);
+      } else if (profile.role === 'doctor') {
+        query = query.eq('doctor_id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setConsultations(data || []);
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Error fetching consultations",
         description: error.message,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, profile, toast]);
 
-  const bookConsultation = async (doctorId: string, scheduledAt: string, symptoms?: string) => {
+  useEffect(() => {
+    fetchConsultations();
+  }, [fetchConsultations]);
+
+  const bookConsultation = async (doctorId: string, doctorName: string, symptoms: string, type: string) => {
+    if (!user) throw new Error('Not authenticated');
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
       const { data, error } = await supabase
         .from('consultations')
         .insert([{
           doctor_id: doctorId,
           patient_id: user.id,
-          scheduled_at: scheduledAt,
-          symptoms: symptoms || '',
+          scheduled_at: new Date().toISOString(),
+          symptoms: `${type} consultation for: ${symptoms}`,
           status: 'scheduled'
         }])
         .select()
         .single();
 
       if (error) throw error;
+      
+      // Also create a medical record for this consultation
+      await supabase.from('medical_records').insert({
+          patient_id: user.id,
+          consultation_id: data.id,
+          type: 'consultation',
+          title: `Consultation with ${doctorName}`,
+          summary: `Symptoms: ${symptoms}`,
+          created_by: user.id
+      });
 
       toast({
         title: "Success",
@@ -68,7 +106,7 @@ export function useConsultations() {
       return data;
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Error booking consultation",
         description: error.message,
         variant: "destructive",
       });
@@ -76,7 +114,7 @@ export function useConsultations() {
     }
   };
 
-  const updateConsultationStatus = async (id: string, status: string, notes?: string) => {
+  const updateConsultationStatus = async (id: string, status: Consultation['status'], notes?: string) => {
     try {
       const { error } = await supabase
         .from('consultations')
@@ -93,47 +131,12 @@ export function useConsultations() {
       fetchConsultations();
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Error updating consultation",
         description: error.message,
         variant: "destructive",
       });
     }
   };
-
-  const startVideoCall = async (consultationId: string) => {
-    try {
-      const roomId = `consultation-${consultationId}-${Date.now()}`;
-      
-      const { error } = await supabase
-        .from('consultations')
-        .update({ 
-          room_id: roomId,
-          status: 'in-progress'
-        })
-        .eq('id', consultationId);
-
-      if (error) throw error;
-
-      // In a real app, this would open a video call interface
-      toast({
-        title: "Video Call Started",
-        description: `Room ID: ${roomId}`,
-      });
-
-      fetchConsultations();
-      return roomId;
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  useEffect(() => {
-    fetchConsultations();
-  }, []);
 
   return {
     consultations,
@@ -141,6 +144,5 @@ export function useConsultations() {
     fetchConsultations,
     bookConsultation,
     updateConsultationStatus,
-    startVideoCall
   };
 }

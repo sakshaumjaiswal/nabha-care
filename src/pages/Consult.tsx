@@ -1,103 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BookingModal } from '@/components/modals/BookingModal';
 import { Star, Search, Filter } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DoctorProfile {
+    id: string; // This is the user_id from auth.users
+    name: string;
+    specialties: string[];
+    rating: number;
+    is_online: boolean;
+}
 
 const Consult: React.FC = () => {
+  const { profile, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [doctors, setDoctors] = useState<DoctorProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [bookingModal, setBookingModal] = useState<{
     isOpen: boolean;
-    doctorName: string;
+    doctor: { id: string, name: string };
   }>({
     isOpen: false,
-    doctorName: ''
+    doctor: { id: '', name: '' }
   });
+
+  useEffect(() => {
+    if (!authLoading && !profile) {
+      navigate('/auth');
+    }
+  }, [profile, authLoading, navigate]);
+  
+  useEffect(() => {
+    const fetchDoctors = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('profiles')
+            .select(`
+                user_id,
+                name,
+                doctors (
+                    specialties,
+                    rating,
+                    is_online
+                )
+            `)
+            .eq('role', 'doctor');
+
+        if (error) {
+            console.error("Error fetching doctors", error);
+        } else {
+            const transformedData = data
+                .filter(d => d.doctors.length > 0) // Ensure profile is associated with a doctor entry
+                .map(d => ({
+                    id: d.user_id,
+                    name: d.name,
+                    specialties: d.doctors[0]?.specialties || ['General'],
+                    rating: d.doctors[0]?.rating || 4.5,
+                    is_online: d.doctors[0]?.is_online || false,
+                }));
+            setDoctors(transformedData);
+        }
+        setLoading(false);
+    };
+    fetchDoctors();
+  }, []);
 
   const specialties = [
     'General Physician', 'Dermatology', 'Psychiatry', 'Pediatrics',
     'Gynecology', 'ENT', 'Cardiology', 'Gastroenterology'
   ];
 
-  const doctors = [
-    {
-      id: '1',
-      name: 'Dr. Rachna Kucheria',
-      specialty: 'General Physician',
-      experience: '26+ years',
-      rating: 4.9,
-      image: 'https://placehold.co/100x100/E2F5F3/333333?text=Dr',
-      isOnline: true,
-      languages: ['Hindi', 'English']
-    },
-    {
-      id: '2',
-      name: 'Dr. Shehla Agarwal',
-      specialty: 'Dermatology',
-      experience: '25+ years',
-      rating: 4.8,
-      image: 'https://placehold.co/100x100/E2F5F3/333333?text=Dr',
-      isOnline: true,
-      languages: ['English', 'Hindi']
-    },
-    {
-      id: '3',
-      name: 'Dr. Sandip Agnihotri',
-      specialty: 'Dermatology',
-      experience: '25+ years',
-      rating: 4.8,
-      image: 'https://placehold.co/100x100/E2F5F3/333333?text=Dr',
-      isOnline: false,
-      languages: ['English', 'Hindi', 'Punjabi']
-    },
-    {
-        id: '4',
-        name: 'Dr. Vinayak Agarwal',
-        specialty: 'Cardiology',
-        experience: '23+ years',
-        rating: 4.9,
-        image: 'https://placehold.co/100x100/E2F5F3/333333?text=Dr',
-        isOnline: true,
-        languages: ['Hindi', 'English']
-    },
-    {
-        id: '5',
-        name: 'Dr. Kaushal Madan',
-        specialty: 'Gastroenterology',
-        experience: '25+ years',
-        rating: 4.7,
-        image: 'https://placehold.co/100x100/E2F5F3/333333?text=Dr',
-        isOnline: true,
-        languages: ['Hindi', 'English']
-    },
-    {
-      id: '6',
-      name: 'Dr. Rachna Jain',
-      specialty: 'Gynecology',
-      experience: '15+ years',
-      rating: 4.8,
-      image: 'https://placehold.co/100x100/E2F5F3/333333?text=Dr',
-      isOnline: false,
-      languages: ['Hindi', 'English']
+  const handleBooking = (doctor: DoctorProfile) => {
+    if (!profile) {
+        navigate('/auth');
+        return;
     }
-  ];
-
-  const handleBooking = (doctorName: string) => {
     setBookingModal({
       isOpen: true,
-      doctorName,
+      doctor: { id: doctor.id, name: doctor.name },
     });
   };
 
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSpecialty = !selectedSpecialty || selectedSpecialty === 'all' || doctor.specialty === selectedSpecialty;
+                         doctor.specialties.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSpecialty = !selectedSpecialty || selectedSpecialty === 'all' || doctor.specialties.includes(selectedSpecialty);
     return matchesSearch && matchesSpecialty;
   });
 
@@ -114,10 +112,7 @@ const Consult: React.FC = () => {
         </div>
 
         <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-lg">Find Your Doctor</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -164,31 +159,26 @@ const Consult: React.FC = () => {
                     <div className="flex-grow">
                         <div className="flex items-center gap-4 mb-4">
                             <Avatar className="h-20 w-20 border-2 border-medical-primary/20">
-                                <AvatarImage src={doctor.image} alt={doctor.name} />
-                                <AvatarFallback>DR</AvatarFallback>
+                                <AvatarImage src={`https://placehold.co/100x100/E2F5F3/333333?text=${doctor.name.charAt(0)}`} alt={doctor.name} />
+                                <AvatarFallback>{doctor.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                               <h3 className="text-lg font-bold">{doctor.name}</h3>
-                              <p className="text-medical-primary font-medium">{doctor.specialty}</p>
+                              <p className="text-medical-primary font-medium">{doctor.specialties.join(', ')}</p>
                               <div className="flex items-center gap-1 mt-1">
                                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                                 <span className="text-sm font-semibold">{doctor.rating}</span>
                               </div>
                             </div>
                         </div>
-
-                        <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                          <p><strong>Experience:</strong> {doctor.experience}</p>
-                          <p><strong>Languages:</strong> {doctor.languages.join(', ')}</p>
-                        </div>
                     </div>
                     
                     <div className="mt-auto">
-                        {doctor.isOnline ? (
+                        {doctor.is_online ? (
                              <Button 
                              variant="medical" 
                              className="w-full"
-                             onClick={() => handleBooking(doctor.name)}
+                             onClick={() => handleBooking(doctor)}
                            >
                              Consult Now
                            </Button>
@@ -207,8 +197,8 @@ const Consult: React.FC = () => {
 
       <BookingModal
         isOpen={bookingModal.isOpen}
-        onClose={() => setBookingModal({ isOpen: false, doctorName: '' })}
-        doctorName={bookingModal.doctorName}
+        onClose={() => setBookingModal({ isOpen: false, doctor: {id: '', name: ''} })}
+        doctor={bookingModal.doctor}
       />
     </div>
   );
