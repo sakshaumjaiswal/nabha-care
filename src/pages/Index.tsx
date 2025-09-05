@@ -16,9 +16,13 @@ import {
 } from 'lucide-react';
 import heroImage from '@/assets/hero-telemedicine.jpg';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/hooks/useAuth';
 
 const Index: React.FC = () => {
   const { t } = useTranslation();
+  const { profile } = useAuth();
+
+  const ctaLink = profile ? `/dashboard/${profile.role}` : '/auth';
 
   const features = [
     {
@@ -71,19 +75,21 @@ const Index: React.FC = () => {
                 </p>
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button variant="medical" size="lg" className="text-lg px-8 py-3" asChild>
-                  <Link to="/auth/signup?role=patient">
-                    {t('landing.startPatient')}
-                    <ChevronRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button variant="outline" size="lg" className="text-lg px-8 py-3" asChild>
-                  <Link to="/auth/signup?role=doctor">
-                    {t('landing.joinDoctor')}
-                  </Link>
-                </Button>
-              </div>
+              {!profile && (
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button variant="medical" size="lg" className="text-lg px-8 py-3" asChild>
+                    <Link to="/auth?role=patient">
+                      {t('landing.startPatient')}
+                      <ChevronRight className="ml-2 h-5 w-5" />
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="lg" className="text-lg px-8 py-3" asChild>
+                    <Link to="/auth?role=doctor">
+                      {t('landing.joinDoctor')}
+                    </Link>
+                  </Button>
+                </div>
+              )}
               
               <div className="flex items-center gap-6 pt-4">
                 <div className="flex items-center gap-1">
@@ -179,7 +185,7 @@ const Index: React.FC = () => {
             </p>
             <div className="flex justify-center">
               <Button variant="secondary" size="lg" className="text-lg px-8 py-3" asChild>
-                <Link to="/auth/signup">{t('landing.getStarted')}</Link>
+                <Link to={ctaLink}>{t('landing.getStarted')}</Link>
               </Button>
             </div>
           </div>
