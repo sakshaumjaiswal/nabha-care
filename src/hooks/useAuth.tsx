@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 
 interface Profile {
   name: string;
@@ -47,22 +47,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const navigate = useNavigate();
 
   const fetchProfile = useCallback(async (user: User) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('name, role')
-      .eq('user_id', user.id)
-      .single();
+    try {
+        const { data, error, status } = await supabase
+          .from('profiles')
+          .select('name, role')
+          .eq('user_id', user.id)
+          .single();
 
-    if (error) {
-      console.error("Error fetching profile:", error);
-      setProfile(null);
-    } else if (data) {
-      setProfile(data);
+        if (error && status !== 406) {
+          throw error;
+        }
+
+        if (data) {
+          setProfile(data);
+        }
+    } catch (error: any) {
+        console.error("Error fetching profile:", error);
+        toast({ title: "Error fetching user profile", description: error.message, variant: "destructive" });
+        setProfile(null);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
-    setLoading(true);
+    const checkInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          await fetchProfile(currentUser);
+        } else {
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error("Error checking initial session:", error);
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkInitialSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -74,8 +103,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           setProfile(null);
         }
-        
-        setLoading(false);
 
         if (event === 'SIGNED_IN') {
            toast({
@@ -92,25 +119,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     );
 
-    // Initial session check
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-        setSession(session);
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) {
-            await fetchProfile(currentUser);
-        }
-        setLoading(false);
-    });
-
     return () => subscription.unsubscribe();
-  }, [toast, navigate, fetchProfile]);
+  }, [fetchProfile, navigate, toast]);
 
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      // The onAuthStateChange listener will handle navigation
+      // The onAuthStateChange listener will handle navigation and state updates
     } catch (error: any) {
       toast({
         title: "Error",

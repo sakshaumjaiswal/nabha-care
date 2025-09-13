@@ -9,7 +9,6 @@ import { BookingModal } from '@/components/modals/BookingModal';
 import { Star, Search, Filter } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 
 interface DoctorProfile {
     id: string; // This is the user_id from auth.users
@@ -41,39 +40,41 @@ const Consult: React.FC = () => {
     }
   }, [profile, authLoading, navigate]);
   
+  // Replace Supabase fetch with mock data
   useEffect(() => {
-    const fetchDoctors = async () => {
-        setLoading(true);
-        const { data, error } = await supabase
-            .from('profiles')
-            .select(`
-                user_id,
-                name,
-                doctors (
-                    specialties,
-                    rating,
-                    is_online
-                )
-            `)
-            .eq('role', 'doctor');
-
-        if (error) {
-            console.error("Error fetching doctors", error);
-        } else {
-            const transformedData = data
-                .filter(d => d.doctors.length > 0) // Ensure profile is associated with a doctor entry
-                .map(d => ({
-                    id: d.user_id,
-                    name: d.name,
-                    specialties: d.doctors[0]?.specialties || ['General'],
-                    rating: d.doctors[0]?.rating || 4.5,
-                    is_online: d.doctors[0]?.is_online || false,
-                }));
-            setDoctors(transformedData);
-        }
-        setLoading(false);
-    };
-    fetchDoctors();
+    setLoading(true);
+    const mockDoctors: DoctorProfile[] = [
+        {
+            id: '11111111-1111-1111-1111-111111111111',
+            name: 'Dr. Amar Singh',
+            specialties: ['General Physician'],
+            rating: 4.8,
+            is_online: true,
+        },
+        {
+            id: '22222222-2222-2222-2222-222222222222',
+            name: 'Dr. Priya Sharma',
+            specialties: ['Dermatology'],
+            rating: 4.9,
+            is_online: true,
+        },
+        {
+            id: '33333333-3333-3333-3333-333333333333',
+            name: 'Dr. Rajesh Kumar',
+            specialties: ['Cardiology'],
+            rating: 4.7,
+            is_online: false,
+        },
+        {
+            id: '44444444-4444-4444-4444-444444444444',
+            name: 'Dr. Sunita Kaur',
+            specialties: ['Pediatrics', 'General Physician'],
+            rating: 4.8,
+            is_online: true,
+        },
+    ];
+    setDoctors(mockDoctors);
+    setLoading(false);
   }, []);
 
   const specialties = [
@@ -98,6 +99,14 @@ const Consult: React.FC = () => {
     const matchesSpecialty = !selectedSpecialty || selectedSpecialty === 'all' || doctor.specialties.includes(selectedSpecialty);
     return matchesSearch && matchesSpecialty;
   });
+
+  if (authLoading || loading) {
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <h3>Loading doctors...</h3>
+        </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
