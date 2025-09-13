@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Header } from '@/components/layout/Header';
@@ -20,7 +20,14 @@ import { useAuth } from '@/hooks/useAuth';
 
 const Index: React.FC = () => {
   const { t } = useTranslation();
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && profile) {
+      navigate(`/dashboard/${profile.role}`);
+    }
+  }, [profile, authLoading, navigate]);
 
   const ctaLink = profile ? `/dashboard/${profile.role}` : '/auth';
 
@@ -54,6 +61,14 @@ const Index: React.FC = () => {
     { number: '24/7', label: 'Emergency Support' }
   ];
 
+  if (authLoading || profile) {
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <h3>Loading...</h3>
+        </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -75,7 +90,7 @@ const Index: React.FC = () => {
                 </p>
               </div>
               
-              {!profile && (
+              {!profile ? (
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button variant="medical" size="lg" className="text-lg px-8 py-3" asChild>
                     <Link to="/auth?role=patient">
@@ -88,6 +103,15 @@ const Index: React.FC = () => {
                       {t('landing.joinDoctor')}
                     </Link>
                   </Button>
+                </div>
+              ) : (
+                <div className="flex">
+                    <Button variant="medical" size="lg" className="text-lg px-8 py-3" asChild>
+                        <Link to={`/dashboard/${profile.role}`}>
+                            Go to Dashboard
+                            <ChevronRight className="ml-2 h-5 w-5" />
+                        </Link>
+                    </Button>
                 </div>
               )}
               
