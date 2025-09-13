@@ -1,186 +1,224 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
-  Stethoscope, 
-  Search, 
-  ThermometerSun, 
-  Heart, 
-  Brain, 
-  Zap,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Phone
+  Stethoscope, Zap, AlertTriangle, CheckCircle, Clock, Phone, Loader2, FileText, ArrowLeft, Search, Brain, ThermometerSun
 } from 'lucide-react';
 
+// Types
+interface Symptom {
+  id: string;
+  name: string;
+  parent_symptom_id: string | null;
+  question_prompt: string | null;
+}
+interface ConditionResult {
+  condition: {
+    id: string;
+    name: string;
+    description: string;
+    triage_level: 'green' | 'yellow' | 'red';
+    recommendations: string[];
+    when_to_seek_care: string[];
+  };
+  confidence: number;
+}
+
+// Helper to provide icons for symptoms (expand as needed)
+const getSymptomIcon = (symptomName: string) => {
+    const name = symptomName.toLowerCase();
+    if (name.includes('headache')) return Brain;
+    if (name.includes('fever')) return ThermometerSun;
+    if (name.includes('cough')) return Stethoscope; // Placeholder, find a better one if available
+    return Zap; // Default icon
+};
+
+
 const SymptomChecker: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'symptoms' | 'questions' | 'results'>('symptoms');
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [additionalInfo, setAdditionalInfo] = useState<string>('');
+  const [step, setStep] = useState<'initial' | 'questions' | 'results'>('initial');
+  const [allSymptoms, setAllSymptoms] = useState<Symptom[]>([]);
+  const [selectedSymptoms, setSelectedSymptoms] = useState<Map<string, Symptom>>(new Map());
+  const [currentQuestion, setCurrentQuestion] = useState<Symptom | null>(null);
+  const [questionsQueue, setQuestionsQueue] = useState<Symptom[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [results, setResults] = useState<ConditionResult[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [additionalInfo, setAdditionalInfo] = useState(''); // For the UI
+  const { toast } = useToast();
 
-  const commonSymptoms = [
-    { id: 'fever', name: 'Fever', icon: ThermometerSun, category: 'general' },
-    { id: 'headache', name: 'Headache', icon: Brain, category: 'head' },
-    { id: 'chest-pain', name: 'Chest Pain', icon: Heart, category: 'chest' },
-    { id: 'fatigue', name: 'Fatigue', icon: Zap, category: 'general' },
-    { id: 'cough', name: 'Cough', icon: ThermometerSun, category: 'respiratory' },
-    { id: 'nausea', name: 'Nausea', icon: ThermometerSun, category: 'digestive' },
-    { id: 'dizziness', name: 'Dizziness', icon: Brain, category: 'head' },
-    { id: 'back-pain', name: 'Back Pain', icon: Zap, category: 'musculoskeletal' }
-  ];
+  useEffect(() => {
+    setIsLoading(true);
+    const fetchSymptoms = async () => {
+      const { data, error } = await supabase.from('symptoms').select('*');
+      if (error) {
+        toast({ title: "Error", description: "Could not load symptoms.", variant: "destructive" });
+      } else {
+        setAllSymptoms(data || []);
+      }
+      setIsLoading(false);
+    };
+    fetchSymptoms();
+  }, [toast]);
 
-  const mockResults = {
-    condition: 'Common Cold',
-    confidence: 85,
-    triage: 'yellow', // green, yellow, red
-    description: 'Based on your symptoms, you may have a common cold. This is typically a mild viral infection.',
-    recommendations: [
-      'Get plenty of rest',
-      'Stay hydrated',
-      'Use over-the-counter pain relievers if needed',
-      'Monitor your symptoms'
-    ],
-    whenToSeekCare: [
-      'Symptoms worsen after 7 days',
-      'High fever (over 101.3°F)',
-      'Difficulty breathing',
-      'Severe headache or sinus pain'
-    ]
+  const primarySymptoms = allSymptoms.filter(s => s.parent_symptom_id === null && s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  const handlePrimarySelect = (symptom: Symptom) => {
+    const newSelected = new Map(selectedSymptoms);
+    if (newSelected.has(symptom.id)) {
+      newSelected.delete(symptom.id);
+    } else {
+      newSelected.set(symptom.id, symptom);
+    }
+    setSelectedSymptoms(newSelected);
   };
 
-  const toggleSymptom = (symptomId: string) => {
-    setSelectedSymptoms(prev => 
-      prev.includes(symptomId) 
-        ? prev.filter(id => id !== symptomId)
-        : [...prev, symptomId]
-    );
+  const startQuestioning = () => {
+    const queue = Array.from(selectedSymptoms.values()).filter(s => s.question_prompt);
+    setQuestionsQueue(queue);
+    if (queue.length > 0) {
+      setCurrentQuestion(queue[0]);
+      setStep('questions');
+    } else {
+      analyzeSymptoms();
+    }
+  };
+  
+  const handleAnswerSelect = (answer: Symptom) => {
+      const newSelected = new Map(selectedSymptoms);
+      newSelected.set(answer.id, answer);
+      if (answer.parent_symptom_id) {
+          newSelected.delete(answer.parent_symptom_id);
+      }
+      setSelectedSymptoms(newSelected);
+
+      const nextQueue = questionsQueue.slice(1);
+      setQuestionsQueue(nextQueue);
+      if (nextQueue.length > 0) {
+          setCurrentQuestion(nextQueue[0]);
+      } else {
+          setCurrentQuestion(null);
+          analyzeSymptoms(Array.from(newSelected.keys()));
+      }
   };
 
-  const analyzeSymptoms = () => {
-    setCurrentStep('results');
+  const analyzeSymptoms = async (finalSymptomIds?: string[]) => {
+    setIsLoading(true);
+    setStep('results');
+    const symptomIdsToAnalyze = finalSymptomIds || Array.from(selectedSymptoms.keys());
+
+    try {
+      const { data, error } = await supabase.functions.invoke('symptom-analyzer', {
+        body: { symptomIds: symptomIdsToAnalyze },
+      });
+      if (error) throw error;
+      setResults(data);
+    } catch (error: any) {
+      toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const resetChecker = () => {
+    setSelectedSymptoms(new Map());
+    setResults([]);
+    setStep('initial');
+    setCurrentQuestion(null);
+    setQuestionsQueue([]);
+    setSearchQuery('');
+    setAdditionalInfo('');
   };
 
-  const getTriageColor = (triage: string) => {
-    switch (triage) {
-      case 'green': return 'text-medical-success';
-      case 'yellow': return 'text-medical-warning';
-      case 'red': return 'text-medical-error';
-      default: return 'text-muted-foreground';
+  const getTriageInfo = (level: string) => {
+    switch (level) {
+      case 'green': return { color: 'text-medical-success', icon: CheckCircle, bgColor: 'bg-medical-success/10', borderColor: 'border-medical-success' };
+      case 'yellow': return { color: 'text-medical-warning', icon: Clock, bgColor: 'bg-medical-warning/10', borderColor: 'border-medical-warning' };
+      case 'red': return { color: 'text-medical-error', icon: AlertTriangle, bgColor: 'bg-medical-error/10', borderColor: 'border-medical-error' };
+      default: return { color: 'text-muted-foreground', icon: FileText, bgColor: 'bg-muted', borderColor: 'border-border' };
     }
   };
 
-  const getTriageIcon = (triage: string) => {
-    switch (triage) {
-      case 'green': return CheckCircle;
-      case 'yellow': return Clock;
-      case 'red': return AlertTriangle;
-      default: return CheckCircle;
-    }
-  };
-
-  const filteredSymptoms = commonSymptoms.filter(symptom =>
-    symptom.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const progressValue = {
+    initial: 33,
+    questions: 66,
+    results: 100
+  }[step];
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
       <div className="container px-6 py-8 max-w-4xl">
-        {/* Page Header */}
         <div className="mb-8 text-center">
           <div className="w-16 h-16 rounded-full bg-gradient-hero flex items-center justify-center mx-auto mb-4">
             <Stethoscope className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold mb-2">AI Symptom Checker</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Get preliminary health insights based on your symptoms. This is not a substitute for professional medical advice.
+            Get preliminary health insights by answering a few questions. This is not a substitute for professional medical advice.
           </p>
         </div>
 
-        {/* Progress Bar */}
         <Card className="mb-8">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Progress</span>
               <span className="text-sm text-muted-foreground">
-                {currentStep === 'symptoms' ? 'Step 1 of 2' : 'Step 2 of 2'}
+                {step === 'initial' && 'Step 1 of 3: Primary Symptoms'}
+                {step === 'questions' && `Step 2 of 3: Clarifying Questions`}
+                {step === 'results' && 'Step 3 of 3: Assessment Results'}
               </span>
             </div>
-            <Progress 
-              value={currentStep === 'symptoms' ? 50 : 100} 
-              className="h-2"
-            />
+            <Progress value={progressValue} className="h-2" />
           </CardContent>
         </Card>
 
-        {/* Symptom Selection */}
-        {currentStep === 'symptoms' && (
+        {step === 'initial' && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Select Your Symptoms</CardTitle>
-                <CardDescription>
-                  Choose all symptoms you're currently experiencing
-                </CardDescription>
+                <CardTitle>What are your primary symptoms?</CardTitle>
+                <CardDescription>Select all that apply. You can search for symptoms as well.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="relative mb-6">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search symptoms..."
+                    placeholder="Search symptoms (e.g., 'fever', 'pain')"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
                   />
                 </div>
-
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredSymptoms.map((symptom) => {
-                    const isSelected = selectedSymptoms.includes(symptom.id);
-                    return (
-                      <Card
-                        key={symptom.id}
-                        className={`cursor-pointer transition-all duration-200 hover:shadow-medium ${
-                          isSelected ? 'ring-2 ring-medical-primary bg-medical-primary/5' : ''
-                        }`}
-                        onClick={() => toggleSymptom(symptom.id)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              isSelected ? 'bg-medical-primary text-white' : 'bg-surface-elevated'
-                            }`}>
-                              <symptom.icon className="h-5 w-5" />
+                {isLoading && <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
+                {!isLoading && (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {primarySymptoms.map((symptom) => {
+                      const isSelected = selectedSymptoms.has(symptom.id);
+                      const Icon = getSymptomIcon(symptom.name);
+                      return (
+                        <Card
+                          key={symptom.id}
+                          className={`cursor-pointer transition-all duration-200 hover:shadow-medium ${isSelected ? 'ring-2 ring-medical-primary bg-medical-primary/5' : ''}`}
+                          onClick={() => handlePrimarySelect(symptom)}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSelected ? 'bg-medical-primary text-white' : 'bg-surface-elevated'}`}>
+                                <Icon className="h-5 w-5" />
+                              </div>
+                              <span className="font-medium">{symptom.name}</span>
                             </div>
-                            <span className="font-medium">{symptom.name}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-
-                {selectedSymptoms.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="font-medium mb-3">Selected Symptoms:</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSymptoms.map((symptomId) => {
-                        const symptom = commonSymptoms.find(s => s.id === symptomId);
-                        return (
-                          <Badge key={symptomId} variant="secondary">
-                            {symptom?.name}
-                          </Badge>
-                        );
-                      })}
-                    </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -188,134 +226,125 @@ const SymptomChecker: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Additional Information</CardTitle>
-                <CardDescription>
-                  Describe your symptoms in more detail (optional)
-                </CardDescription>
+                <CardTitle>Additional Information (Optional)</CardTitle>
+                <CardDescription>Describe your symptoms in more detail. This information is not yet used in the analysis but can be helpful for a doctor.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
                   placeholder="When did symptoms start? How severe are they? Any other relevant details..."
                   value={additionalInfo}
                   onChange={(e) => setAdditionalInfo(e.target.value)}
-                  rows={4}
+                  rows={3}
                 />
               </CardContent>
             </Card>
 
-            <div className="flex justify-between">
-              <Button variant="outline" asChild>
-                <a href="/dashboard/patient">Back to Dashboard</a>
-              </Button>
-              <Button 
-                variant="medical" 
-                onClick={analyzeSymptoms}
-                disabled={selectedSymptoms.length === 0}
-              >
-                Analyze Symptoms
+            <div className="flex justify-end">
+              <Button size="lg" variant="medical" onClick={startQuestioning} disabled={selectedSymptoms.size === 0}>
+                Next
               </Button>
             </div>
           </div>
         )}
-
-        {/* Results */}
-        {currentStep === 'results' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    mockResults.triage === 'green' ? 'bg-medical-success/10' :
-                    mockResults.triage === 'yellow' ? 'bg-medical-warning/10' :
-                    'bg-medical-error/10'
-                  }`}>
-                    {React.createElement(getTriageIcon(mockResults.triage), {
-                      className: `h-5 w-5 ${getTriageColor(mockResults.triage)}`
-                    })}
-                  </div>
-                  Preliminary Assessment
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">{mockResults.condition}</h3>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-sm text-muted-foreground">Confidence:</span>
-                      <Progress value={mockResults.confidence} className="w-24 h-2" />
-                      <span className="text-sm font-medium">{mockResults.confidence}%</span>
-                    </div>
-                    <p className="text-muted-foreground">{mockResults.description}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
+        
+        {step === 'questions' && currentQuestion && (
+             <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Recommendations</CardTitle>
+                  <CardTitle>{currentQuestion.question_prompt}</CardTitle>
+                  <CardDescription>Please select the most accurate description.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {mockResults.recommendations.map((rec, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <CheckCircle className="h-4 w-4 text-medical-success mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
+                <CardContent className="space-y-3">
+                  {allSymptoms.filter(s => s.parent_symptom_id === currentQuestion.id).map(answer => (
+                    <Card key={answer.id} className="cursor-pointer hover:bg-surface-elevated transition-colors" onClick={() => handleAnswerSelect(answer)}>
+                      <CardContent className="p-4 font-medium">{answer.name}</CardContent>
+                    </Card>
+                  ))}
                 </CardContent>
               </Card>
+        )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">When to Seek Care</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {mockResults.whenToSeekCare.map((warning, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 text-medical-warning mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{warning}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
+        {step === 'results' && (
+            <div className="space-y-6">
+                {isLoading && (
+                    <Card>
+                        <CardContent className="p-8 flex flex-col items-center gap-4">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <p className="text-muted-foreground">Analyzing your symptoms...</p>
+                        </CardContent>
+                    </Card>
+                )}
+                {!isLoading && results.length > 0 && results.map((result, index) => {
+                  const triage = getTriageInfo(result.condition.triage_level);
+                  return (
+                    <Card key={result.condition.id} className={index === 0 ? `border-2 ${triage.borderColor}` : ''}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${triage.bgColor}`}>
+                              <triage.icon className={`h-5 w-5 ${triage.color}`} />
+                            </div>
+                            <span>{index + 1}. {result.condition.name}</span>
+                          </div>
+                          <Badge variant={index === 0 ? "default" : "secondary"}>{result.confidence}% Confidence</Badge>
+                        </CardTitle>
+                        <CardDescription>{result.condition.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="grid gap-6 md:grid-cols-2">
+                        <div>
+                          <h4 className="font-semibold mb-3">Recommendations</h4>
+                          <ul className="space-y-2">
+                            {result.condition.recommendations.map((rec, i) => (
+                              <li key={i} className="flex items-start gap-3 text-sm">
+                                <CheckCircle className="h-4 w-4 text-medical-success mt-1 flex-shrink-0" />
+                                <span>{rec}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold mb-3">When to Seek Care</h4>
+                          <ul className="space-y-2">
+                            {result.condition.when_to_seek_care.map((warning, i) => (
+                              <li key={i} className="flex items-start gap-3 text-sm">
+                                <AlertTriangle className="h-4 w-4 text-medical-warning mt-1 flex-shrink-0" />
+                                <span>{warning}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
 
-            <Card className="border-medical-primary/30 bg-medical-primary/5">
-              <CardContent className="p-6">
-                <div className="text-center space-y-4">
-                  <h3 className="text-lg font-semibold">Need Professional Care?</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This assessment is for informational purposes only. Consult a healthcare professional for proper diagnosis.
-                  </p>
-                  <div className="flex gap-4 justify-center">
-                    <Button variant="medical" asChild>
-                      <a href="/consult">Book Consultation</a>
+                {!isLoading && results.length === 0 && (
+                     <Card>
+                        <CardContent className="p-8 text-center">
+                            <h3 className="text-lg font-semibold">No Clear Match Found</h3>
+                            <p className="text-muted-foreground">Our system could not find a confident match for your symptoms. It's best to consult a professional.</p>
+                        </CardContent>
+                     </Card>
+                )}
+
+                <Card className="border-medical-primary/30 bg-medical-primary/5">
+                  <CardContent className="p-6 text-center space-y-3">
+                      <h3 className="text-lg font-semibold">Need Professional Medical Advice?</h3>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        This assessment is for informational purposes only. Always consult a qualified healthcare professional for an accurate diagnosis and treatment plan.
+                      </p>
+                      <div className="flex gap-4 justify-center pt-2">
+                        <Button variant="medical" asChild><a href="/consult">Book Consultation</a></Button>
+                        <Button variant="destructive" asChild><a href="tel:102"><Phone className="h-4 w-4 mr-2" />Emergency Call</a></Button>
+                      </div>
+                  </CardContent>
+                </Card>
+
+                <div className="flex justify-center">
+                    <Button variant="outline" onClick={resetChecker}>
+                        <ArrowLeft className="mr-2 h-4 w-4"/> Start Over
                     </Button>
-                    <Button variant="destructive" asChild>
-                      <a href="tel:102">
-                        <Phone className="h-4 w-4 mr-2" />
-                        Emergency Call
-                      </a>
-                    </Button>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setCurrentStep('symptoms')}>
-                Start Over
-              </Button>
-              <Button variant="outline" asChild>
-                <a href="/dashboard/patient">Back to Dashboard</a>
-              </Button>
             </div>
-          </div>
         )}
       </div>
     </div>
