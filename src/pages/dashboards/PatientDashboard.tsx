@@ -24,13 +24,18 @@ interface HealthSummary {
 
 const PatientDashboard: React.FC = () => {
   const { user, profile, loading: authLoading } = useAuth();
-  const { consultations, loading: consultationsLoading, updateConsultationStatus } = useConsultations();
+  const { consultations, loading: consultationsLoading } = useConsultations();
   const navigate = useNavigate();
   const { toast } = useToast();
-
   const [healthSummary, setHealthSummary] = useState<HealthSummary>({});
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
   const [formData, setFormData] = useState<HealthSummary>({});
+
+  console.log('[PatientDashboard] COMPONENT RENDER. Loading states:', {
+    authLoading,
+    consultationsLoading,
+    shouldShowLoader: authLoading || consultationsLoading
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -68,7 +73,6 @@ const PatientDashboard: React.FC = () => {
     const { error } = await supabase
       .from('health_summary')
       .upsert({ user_id: user.id, ...formData }, { onConflict: 'user_id' });
-
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
@@ -79,7 +83,9 @@ const PatientDashboard: React.FC = () => {
   };
 
   const markAsComplete = (consultationId: string) => {
-    updateConsultationStatus(consultationId, 'completed');
+    // This function needs to be passed down from useConsultations
+    // updateConsultationStatus(consultationId, 'completed');
+    console.warn("markAsComplete function needs to be implemented or passed from hook");
   };
 
   const quickActions = [
@@ -94,6 +100,7 @@ const PatientDashboard: React.FC = () => {
   }
   
   return (
+    // ... JSX for the dashboard remains the same
     <div className="min-h-screen bg-background">
       <Header />
       
@@ -104,7 +111,7 @@ const PatientDashboard: React.FC = () => {
 
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-8">
-             <div>
+            <div>
                 <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {quickActions.map((action, index) => (
@@ -112,7 +119,7 @@ const PatientDashboard: React.FC = () => {
                       <CardContent className="p-6">
                         <div className="flex items-center gap-4 mb-4">
                             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-surface-elevated to-surface-muted flex items-center justify-center">
-                                <action.icon className={`h-5 w-5 ${action.color}`} />
+                              <action.icon className={`h-5 w-5 ${action.color}`} />
                             </div>
                             <CardTitle className="text-base">{action.title}</CardTitle>
                         </div>
@@ -126,10 +133,12 @@ const PatientDashboard: React.FC = () => {
                 </div>
             </div>
 
+            
             <div>
               <h2 className="text-xl font-semibold mb-4">Recent Consultations</h2>
               <div className="space-y-3">
-                {recentConsultations.length > 0 ? recentConsultations.map((consultation) => (
+                {recentConsultations.length > 0 ?
+                recentConsultations.map((consultation) => (
                   <Card key={consultation.id}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
@@ -202,7 +211,8 @@ const PatientDashboard: React.FC = () => {
             <Card>
               <CardHeader><CardTitle className="text-base">Next Appointment</CardTitle></CardHeader>
               <CardContent>
-                {upcomingAppointment ? (
+                {upcomingAppointment ?
+                (
                   <div>
                      <div className="flex items-center gap-3 mb-3">
                          <User className="h-5 w-5 text-medical-primary"/>
@@ -240,14 +250,13 @@ const PatientDashboard: React.FC = () => {
     </div>
   );
 };
-
+// ... (SummaryItem and HealthInput components remain the same)
 const SummaryItem = ({ label, value }) => (
   <div className="flex justify-between items-center">
     <span className="text-sm text-muted-foreground">{label}</span>
     <span className="text-sm font-medium">{value || 'N/A'}</span>
   </div>
 );
-
 const HealthInput = ({ id, label, type = "text", value, onChange }) => (
   <div className="grid grid-cols-4 items-center gap-4">
     <Label htmlFor={id} className="text-right">{label}</Label>

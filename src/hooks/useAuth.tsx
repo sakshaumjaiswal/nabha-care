@@ -7,7 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 interface Profile {
   name: string;
   role: string;
-  // add other profile fields as needed
 }
 
 interface AuthContextType {
@@ -48,101 +47,112 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchProfile = useCallback(async (user: User) => {
     try {
-        const { data, error, status } = await supabase
-          .from('profiles')
-          .select('name, role')
-          .eq('user_id', user.id)
-          .single();
+      const { data, error, status } = await supabase
+        .from('profiles')
+        .select('name, role')
+        .eq('user_id', user.id)
+        .single();
 
-        if (error && status !== 406) {
-          throw error;
-        }
-
-        if (data) {
-          setProfile(data);
-        }
+      if (error && status !== 406) throw error;
+      if (data) setProfile(data);
     } catch (error: any) {
-        console.error("Error fetching profile:", error);
-        toast({ title: "Error fetching user profile", description: error.message, variant: "destructive" });
-        setProfile(null);
+      toast({ title: "Error fetching user profile", description: error?.message || String(error), variant: "destructive" });
+      setProfile(null);
     }
   }, [toast]);
 
   useEffect(() => {
-    const checkInitialSession = async () => {
+    let mounted = true;
+    console.log('[useAuth] Simplified Effect is RUNNING.');
+
+    // Immediately get the current session so refresh doesn't hang
+    const init = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        const currentUser = session?.user ?? null;
+        // Supabase v2: supabase.auth.getSession()
+        // (older clients may use supabase.auth.session())
+        const getSessionResult: any = await supabase.auth.getSession?.() ?? await supabase.auth.session?.();
+        // normalize result
+        const initialSession = getSessionResult?.data?.session ?? getSessionResult ?? null;
+        if (!mounted) return;
+
+        setSession(initialSession);
+        const currentUser = initialSession?.user ?? null;
         setUser(currentUser);
+
         if (currentUser) {
           await fetchProfile(currentUser);
         } else {
           setProfile(null);
         }
-      } catch (error) {
-        console.error("Error checking initial session:", error);
-        setSession(null);
-        setUser(null);
-        setProfile(null);
+      } catch (err: any) {
+        console.error('[useAuth] Error fetching initial session:', err);
       } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+
+      // Now subscribe to future auth changes
+      const onAuth = supabase.auth.onAuthStateChange((event: string, session: Session | null) => {
+        console.log('[useAuth] onAuthStateChange', event);
+        setSession(session);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          fetchProfile(currentUser).catch(e => console.error('[useAuth] fetchProfile after event failed', e));
+        } else {
+          setProfile(null);
+        }
+
+        // Make sure loading is false after any state update
         setLoading(false);
+
+        if (event === 'SIGNED_IN') {
+          toast({ title: "Welcome back!", description: "You've been signed in successfully." });
+        } else if (event === 'SIGNED_OUT') {
+          toast({ title: "Signed out", description: "You've been signed out successfully." });
+          navigate('/');
+        }
+      });
+
+      // Supabase may return different shapes depending on client version
+      // For v2, onAuth returns { data: { subscription } }
+      // For older versions, it might return just the subscription
+      // Normalize unsubscribe function:
+      const subscription = onAuth?.data?.subscription ?? onAuth;
+      // store for cleanup
+      (init as any)._subscription = subscription;
+    };
+
+    init();
+
+    return () => {
+      mounted = false;
+      console.log('[useAuth] Unsubscribing from auth changes.');
+      const subscription = (init as any)._subscription;
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      } else if (subscription && typeof subscription === 'function') {
+        // sometimes unsubscribe is a function itself
+        try { subscription(); } catch (e) { /* ignore */ }
       }
     };
 
-    checkInitialSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-
-        if (currentUser) {
-          await fetchProfile(currentUser);
-        } else {
-          setProfile(null);
-        }
-
-        if (event === 'SIGNED_IN') {
-           toast({
-            title: "Welcome back!",
-            description: "You've been signed in successfully."
-          });
-        } else if (event === 'SIGNED_OUT') {
-           toast({
-            title: "Signed out",
-            description: "You've been signed out successfully."
-          });
-          navigate('/');
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [fetchProfile, navigate, toast]);
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      // The onAuthStateChange listener will handle navigation and state updates
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to sign out",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message || "Failed to sign out", variant: "destructive" });
     }
   };
 
-  const value = {
-    user,
-    profile,
-    session,
-    loading,
-    signOut
-  };
+  const value = { user, profile, session, loading, signOut };
 
   return (
     <AuthContext.Provider value={value}>
