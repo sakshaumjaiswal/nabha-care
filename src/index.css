@@ -11,13 +11,13 @@
     --foreground: 210 11% 15%;
     
     /* Medical Brand Colors */
-    --medical-primary: 162 72% 30%;        /* Deep teal/medical green */
-    --medical-primary-light: 162 68% 42%;   /* Lighter medical green */
-    --medical-secondary: 203 89% 53%;       /* Medical blue */
-    --medical-accent: 29 88% 60%;           /* Warm orange for CTAs */
-    --medical-success: 120 58% 40%;         /* Success green */
-    --medical-warning: 45 93% 58%;          /* Warning amber */
-    --medical-error: 0 72% 51%;             /* Error red */
+    --medical-primary: 162 72% 30%; /* Deep teal/medical green */
+    --medical-primary-light: 162 68% 42%; /* Lighter medical green */
+    --medical-secondary: 203 89% 53%; /* Medical blue */
+    --medical-accent: 29 88% 60%; /* Warm orange for CTAs */
+    --medical-success: 120 58% 40%; /* Success green */
+    --medical-warning: 45 93% 58%; /* Warning amber */
+    --medical-error: 0 72% 51%; /* Error red */
     
     /* Surface Colors */
     --card: 0 0% 100%;
@@ -27,7 +27,7 @@
     
     --popover: 0 0% 100%;
     --popover-foreground: 210 11% 15%;
-
+    
     /* Semantic Design Tokens */
     --primary: 162 72% 30%;
     --primary-foreground: 0 0% 100%;
@@ -79,7 +79,7 @@
     --card-foreground: 210 20% 98%;
     --surface-elevated: 210 11% 18%;
     --surface-muted: 210 11% 12%;
-
+    
     --popover: 210 11% 15%;
     --popover-foreground: 210 20% 98%;
 
@@ -163,4 +163,31 @@
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground));
   }
+}
+
+/* === ADD THIS CODE FOR GOOGLE TRANSLATE WIDGET === */
+
+/* 1. Hide the entire Google Translate banner iframe */
+.skiptranslate {
+  display: none !important;
+}
+
+/* 2. Prevent Google from adding a `top` style to the body, which pushes your site down */
+body {
+  top: 0px !important;
+}
+
+/* 3. Hide the "Original text" tooltip that appears on hover */
+.goog-te-tooltip {
+  display: none !important;
+}
+.goog-te-tooltip:hover {
+  display: none !important;
+}
+
+/* 4. Remove the highlight Google puts on translated text */
+.goog-text-highlight {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }

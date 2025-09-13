@@ -7,7 +7,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTranslation } from 'react-i18next';
 
 interface Language {
   code: string;
@@ -19,15 +18,43 @@ const languages: Language[] = [
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'hi', name: 'Hindi', nativeName: 'हिंदी' },
   { code: 'pa', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ' },
+  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
+  { code: 'gu', name: 'Gujarati', nativeName: 'ગુજરાતી' },
+  { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' },
+  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' },
+  { code: 'es', name: 'Spanish', nativeName: 'Español' },
+  { code: 'fr', name: 'French', nativeName: 'Français' },
 ];
 
-export const LanguageSwitcher: React.FC = () => {
-  const { i18n } = useTranslation();
+// Helper function to read the current language from Google's cookie
+const getCookie = (name: string): string | null => {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return match[2];
+  return null;
+};
 
-  const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
+const getCurrentLangCode = (): string => {
+  const cookieValue = getCookie('googtrans');
+  if (cookieValue) {
+    const langCode = cookieValue.split('/')[2];
+    return langCode || 'en';
+  }
+  return 'en';
+};
+
+export const LanguageSwitcher: React.FC = () => {
+  const currentLangCode = getCurrentLangCode();
+  const currentLanguage = languages.find(lang => lang.code === currentLangCode) || languages[0];
 
   const handleLanguageChange = (langCode: string) => {
-    i18n.changeLanguage(langCode);
+    // Set the cookie that the Google Translate script reads
+    const date = new Date();
+    date.setTime(date.getTime() + (365 * 24 * 60 * 60 * 1000));
+    const expires = "; expires=" + date.toUTCString();
+    document.cookie = `googtrans=/en/${langCode}${expires}; path=/; SameSite=Lax`;
+
+    // The widget requires a page reload to apply the translation
+    window.location.reload();
   };
 
   return (
@@ -44,7 +71,7 @@ export const LanguageSwitcher: React.FC = () => {
           <DropdownMenuItem
             key={language.code}
             onClick={() => handleLanguageChange(language.code)}
-            className={i18n.language === language.code ? 'bg-surface-elevated' : ''}
+            className={currentLangCode === language.code ? 'bg-surface-elevated' : ''}
           >
             <div className="flex flex-col">
               <span className="font-medium">{language.nativeName}</span>
