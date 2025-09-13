@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { supabase } from '../integrations/supabase/client';
+import { useToast } from './use-toast';
 import { useAuth } from './useAuth';
 
 export interface Consultation {
@@ -34,14 +34,7 @@ export function useConsultations() {
       
       let query = supabase
         .from('consultations')
-        .select(`
-          *,
-          doctors (
-            profiles (
-              name
-            )
-          )
-        `)
+        .select(`*`)
         .order('scheduled_at', { ascending: false });
       
       if (profile.role === 'patient') {
@@ -50,16 +43,43 @@ export function useConsultations() {
         query = query.eq('doctor_id', user.id);
       }
 
-      const { data, error } = await query;
+      const { data: consultationsData, error: consultationsError } = await query;
 
-      if (error) throw error;
-      setConsultations(data || []);
+      if (consultationsError) throw consultationsError;
+      
+      if (consultationsData && consultationsData.length > 0) {
+        const doctorIds = [...new Set(consultationsData.map(c => c.doctor_id))];
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, name')
+          .in('user_id', doctorIds);
+
+        if (profilesError) throw profilesError;
+
+        const profilesMap = new Map(profilesData.map(p => [p.user_id, p.name]));
+        
+        const consultationsWithDoctorNames = consultationsData.map(c => ({
+          ...c,
+          doctors: {
+            profiles: {
+              name: profilesMap.get(c.doctor_id) || 'Unknown Doctor'
+            }
+          }
+        }));
+        
+        setConsultations(consultationsWithDoctorNames as unknown as Consultation[]);
+      } else {
+        setConsultations([]);
+      }
     } catch (error: any) {
       toast({
         title: "Error fetching consultations",
+        // The original error message is now displayed in the toast
         description: error.message,
         variant: "destructive",
       });
+      // Set consultations to an empty array on error to prevent crashing the UI
+      setConsultations([]);
     } finally {
       setLoading(false);
     }
