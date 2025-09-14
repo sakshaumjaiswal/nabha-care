@@ -12,11 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { Switch } from "@/components/ui/switch";
 import { 
   Video, Calendar, Clock, User, FileText, Users, TrendingUp, Phone, Bell, RefreshCw, Loader2, Check, Stethoscope
 } from 'lucide-react';
 
-// SECTION 1: ONBOARDING COMPONENT
+// SECTION 1: ONBOARDING COMPONENT (Unchanged)
 const DoctorOnboardingForm = ({ onProfileComplete }) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -43,6 +44,8 @@ const DoctorOnboardingForm = ({ onProfileComplete }) => {
         qualifications: formData.qualifications,
         bio: formData.bio,
         consultation_fee: Number(formData.consultation_fee),
+      }, {
+        onConflict: 'user_id'
       });
 
     if (error) {
@@ -98,19 +101,16 @@ const DoctorOnboardingForm = ({ onProfileComplete }) => {
   );
 };
 
-// SECTION 2: MODAL FOR MANAGING CONSULTATIONS
-// NOTE: The full code for this modal is now included below as requested.
+// SECTION 2: MODAL FOR MANAGING CONSULTATIONS (Unchanged)
 const ConsultationDetailsModal = ({ consultation, isOpen, onClose, onUpdate }) => {
-  const [notes, setNotes] = useState(consultation?.notes || '');
+  const [notes, setNotes] = useState('');
   const [prescriptionItems, setPrescriptionItems] = useState([{ name: '', dosage: '' }]);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Reset form state when a new consultation is passed in
     if (consultation) {
       setNotes(consultation.notes || '');
-      // Ensure prescription data is handled correctly, even if null
       const existingPrescription = consultation.prescription?.items;
       setPrescriptionItems(Array.isArray(existingPrescription) && existingPrescription.length > 0 ? existingPrescription : [{ name: '', dosage: '' }]);
     }
@@ -120,14 +120,12 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, onUpdate }) =
     if (!consultation) return;
     setIsSaving(true);
     try {
-      // 1. Update the consultation notes and mark as complete
       const { error: consultationError } = await supabase
         .from('consultations')
         .update({ notes, status: 'completed' })
         .eq('id', consultation.id);
       if (consultationError) throw consultationError;
 
-      // 2. Create a new medical record for the prescription if items are added
       const validPrescriptionItems = prescriptionItems.filter(p => p.name && p.name.trim() !== '');
       if (validPrescriptionItems.length > 0) {
         const { error: recordError } = await supabase
@@ -145,8 +143,8 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, onUpdate }) =
       }
       
       toast({ title: "Success", description: "Consultation updated and prescription issued." });
-      onUpdate(); // Re-fetch consultations on the dashboard
-      onClose(); // Close the modal
+      onUpdate();
+      onClose();
     } catch (error: any) {
       toast({ title: "Error Saving", description: error.message, variant: "destructive" });
     } finally {
@@ -206,9 +204,13 @@ const ConsultationDetailsModal = ({ consultation, isOpen, onClose, onUpdate }) =
 };
 
 // SECTION 3: THE MAIN DASHBOARD UI
-const MainDoctorDashboard = ({ consultations, loading, fetchConsultations }) => {
-  const { profile } = useAuth();
-  const [videoCallModal, setVideoCallModal] = useState({ isOpen: false, patientName: '', roomId: '' });
+const MainDoctorDashboard = ({ initialDoctorProfile, consultations, loading, fetchConsultations }) => {
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  // NEW: Bringing updateConsultationStatus from the hook
+  const { updateConsultationStatus } = useConsultations();
+  const [doctorProfile, setDoctorProfile] = useState(initialDoctorProfile);
+  const [videoCallModal, setVideoCallModal] = useState({ isOpen: false, patientName: '', consultationId: null });
   const [detailsModal, setDetailsModal] = useState<{ isOpen: boolean, consultation: Consultation | null }>({ isOpen: false, consultation: null });
 
   const todayStart = new Date();
@@ -228,16 +230,43 @@ const MainDoctorDashboard = ({ consultations, loading, fetchConsultations }) => 
     };
   }, [consultations, todayStart]);
 
-  const handleJoinCall = (consultation: Consultation) => {
+  const handleStatusChange = async (newStatus: boolean) => {
+    if (!user) return;
+    setDoctorProfile(prev => ({ ...prev, is_online: newStatus }));
+
+    const { error } = await supabase
+      .from('doctors')
+      .update({ is_online: newStatus })
+      .eq('user_id', user.id);
+
+    if (error) {
+      setDoctorProfile(prev => ({ ...prev, is_online: !newStatus }));
+      toast({ title: "Status Update Failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Status Updated", description: `You are now ${newStatus ? 'Online' : 'Offline'}.` });
+    }
+  };
+  
+  // UPDATED: This now updates the status to 'in-progress'
+  const handleJoinCall = async (consultation: Consultation) => {
+    await updateConsultationStatus(consultation.id, 'in-progress');
     setVideoCallModal({
       isOpen: true,
       patientName: consultation.patients?.name || 'Patient',
-      roomId: consultation.room_id || consultation.id,
+      consultationId: consultation.id
     });
   };
   
   const handleManageConsultation = (consultation: Consultation) => {
     setDetailsModal({ isOpen: true, consultation });
+  };
+
+  // NEW: Function for the modal to end the call
+  const handleEndCallFromModal = async () => {
+    if (videoCallModal.consultationId) {
+      await updateConsultationStatus(videoCallModal.consultationId, 'completed');
+      setVideoCallModal({ isOpen: false, patientName: '', consultationId: null });
+    }
   };
 
   return (
@@ -286,6 +315,8 @@ const MainDoctorDashboard = ({ consultations, loading, fetchConsultations }) => 
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      {/* UPDATED: Added a visual indicator for in-progress calls */}
+                      {c.status === 'in-progress' && <span className="flex h-3 w-3 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-medical-success opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-medical-success"></span></span>}
                       <Button variant="outline" size="sm" onClick={() => handleJoinCall(c)}>Join Call</Button>
                       <Button variant="medical" size="sm" onClick={() => handleManageConsultation(c)}>Manage</Button>
                     </div>
@@ -296,6 +327,26 @@ const MainDoctorDashboard = ({ consultations, loading, fetchConsultations }) => 
           </div>
 
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Your Status</CardTitle>
+                <CardDescription>Set your availability for new consultations.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-surface-muted">
+                  <Label htmlFor="status-toggle" className={`font-medium ${doctorProfile.is_online ? 'text-medical-success' : 'text-medical-error'}`}>
+                    {doctorProfile.is_online ? "Online & Available" : "Offline"}
+                  </Label>
+                  <Switch
+                    id="status-toggle"
+                    checked={doctorProfile.is_online}
+                    onCheckedChange={handleStatusChange}
+                    aria-label="Toggle online status"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-3">
@@ -312,12 +363,14 @@ const MainDoctorDashboard = ({ consultations, loading, fetchConsultations }) => 
             </Card>
           </div>
         </div>
-
+        
+        {/* UPDATED: Pass the new handleEndCall function to the modal */}
         <VideoCallModal
           isOpen={videoCallModal.isOpen}
-          onClose={() => setVideoCallModal(prev => ({ ...prev, isOpen: false }))}
+          onClose={() => setVideoCallModal({ ...videoCallModal, isOpen: false })}
           patientName={videoCallModal.patientName}
-          roomId={videoCallModal.roomId}
+          roomId={videoCallModal.consultationId}
+          onEndCall={handleEndCallFromModal} // Pass the end call handler
         />
         <ConsultationDetailsModal 
           consultation={detailsModal.consultation}
@@ -329,8 +382,7 @@ const MainDoctorDashboard = ({ consultations, loading, fetchConsultations }) => 
   );
 };
 
-
-// SECTION 4: MAIN COMPONENT EXPORT
+// SECTION 4: MAIN COMPONENT EXPORT (Unchanged)
 const DoctorDashboard: React.FC = () => {
   const { doctorProfile, loading: profileLoading, refetch } = useDoctorProfile();
   const { consultations, loading: consultationsLoading, fetchConsultations } = useConsultations();
@@ -352,6 +404,7 @@ const DoctorDashboard: React.FC = () => {
       <Header />
       {isProfileComplete ? (
         <MainDoctorDashboard 
+            initialDoctorProfile={doctorProfile}
             consultations={consultations} 
             loading={consultationsLoading} 
             fetchConsultations={fetchConsultations} 

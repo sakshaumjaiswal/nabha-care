@@ -11,6 +11,8 @@ import DoctorDashboard from "./pages/dashboards/DoctorDashboard";
 import PharmacyDashboard from "./pages/dashboards/PharmacyDashboard";
 import GovtDashboard from "./pages/dashboards/GovtDashboard";
 import Consult from "./pages/Consult";
+// NEW: Import the new VideoCallPage component
+import VideoCallPage from "./pages/VideoCallPage";
 import SymptomChecker from "./pages/SymptomChecker";
 import Pharmacy from "./pages/Pharmacy";
 import Records from "./pages/Records";
@@ -33,10 +35,11 @@ const App = () => (
             <Route path="/dashboard/pharmacy" element={<PharmacyDashboard />} />
             <Route path="/dashboard/govt" element={<GovtDashboard />} />
             <Route path="/consult" element={<Consult />} />
+            {/* NEW: Add the route for the video call page */}
+            <Route path="/consult/call" element={<VideoCallPage />} />
             <Route path="/symptom-checker" element={<SymptomChecker />} />
             <Route path="/pharmacy" element={<Pharmacy />} />
             <Route path="/records" element={<Records />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

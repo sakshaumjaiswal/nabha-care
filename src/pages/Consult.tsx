@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BookingModal } from '@/components/modals/BookingModal';
-// CORRECTED LINE: Added Stethoscope to the import list
 import { Star, Search, Filter, Loader2, Stethoscope } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/hooks/useAuth';
@@ -21,10 +20,10 @@ const Consult: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [bookingModal, setBookingModal] = useState<{
     isOpen: boolean;
-    doctor: { id: string, name: string };
+    doctor: DoctorProfile | null;
   }>({
     isOpen: false,
-    doctor: { id: '', name: '' }
+    doctor: null
   });
 
   useEffect(() => {
@@ -45,7 +44,7 @@ const Consult: React.FC = () => {
     }
     setBookingModal({
       isOpen: true,
-      doctor: { id: doctor.id, name: doctor.name },
+      doctor: doctor, // Pass the whole doctor object
     });
   };
 
@@ -159,7 +158,7 @@ const Consult: React.FC = () => {
 
       <BookingModal
         isOpen={bookingModal.isOpen}
-        onClose={() => setBookingModal({ isOpen: false, doctor: {id: '', name: ''} })}
+        onClose={() => setBookingModal({ isOpen: false, doctor: null })}
         doctor={bookingModal.doctor}
       />
     </div>
